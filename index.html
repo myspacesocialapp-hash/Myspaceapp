@@ -56,15 +56,23 @@
             animation: rotation 1s linear infinite;
         }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Modal Base Styles */
         .modal {
             position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);
             display: flex; align-items: center; justify-content: center;
             z-index: 50;
+            transition: opacity 0.2s ease-in-out;
         }
         .modal-content {
             background: white; padding: 24px; border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             width: 90%; max-width: 500px;
+            transform: scale(0.95);
+            transition: all 0.2s ease-in-out;
+        }
+        .modal:not(.hidden) .modal-content {
+            transform: scale(1);
         }
     </style>
 </head>
@@ -72,20 +80,9 @@
 
     <!-- Global Containers -->
     <div id="loading-overlay" class="hidden"><div class="loader"></div></div>
-    
-    <!-- Auth Container (Login/Sign Up) -->
-    <div id="auth-container" class="page active w-full min-h-screen flex flex-col items-center justify-center p-4 auth-gradient">
-        <!-- Auth content will be injected by JS -->
-    </div>
-
-    <!-- Main App Container (Holds all pages after login) -->
+    <div id="auth-container" class="page active w-full min-h-screen flex flex-col items-center justify-center p-4 auth-gradient"></div>
     <div id="app-container" class="page w-full min-h-screen bg-gray-100">
-        <!-- Page Content will be dynamically inserted here -->
-        <div id="page-content" class="p-4" style="padding-bottom: 80px;">
-            <!-- This is where pages like Feed, Friends, Profile, etc. are rendered -->
-        </div>
-
-        <!-- Bottom Navigation Bar -->
+        <div id="page-content" class="p-4" style="padding-bottom: 80px;"></div>
         <nav class="fixed bottom-0 left-0 right-0 w-full max-w-xl mx-auto bg-white border-t border-gray-200 flex justify-around items-center h-16">
             <button data-page="feed" class="nav-btn"><i class="ph-bold ph-house"></i><span data-lang-key="nav_feed">Feed</span></button>
             <button data-page="friends" class="nav-btn"><i class="ph-bold ph-users-three"></i><span data-lang-key="nav_friends">Friends</span></button>
@@ -94,61 +91,56 @@
         </nav>
     </div>
 
-    <!-- 
-      MODALS 
-      These are hidden by default and shown when needed.
-    -->
-
+    <!-- All Modals -->
     <!-- Alert Modal -->
     <div id="alert-modal" class="modal hidden">
         <div class="modal-content text-center">
-            <p id="alert-message" class="mb-6 text-lg"></p>
+            <p id="alert-message" class="text-lg text-slate-700 mb-6"></p>
             <button id="alert-ok-btn" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg" data-lang-key="btn_ok">OK</button>
         </div>
     </div>
-
+    
     <!-- Comment Modal -->
     <div id="comment-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2 class="text-xl font-bold mb-4" data-lang-key="title_comments">Comments</h2>
-            <div id="comment-list" class="space-y-3 mb-4 max-h-60 overflow-y-auto"></div>
-            <textarea id="comment-input" class="w-full p-2 border border-gray-300 rounded-lg" data-lang-key="placeholder_comment"></textarea>
-            <div class="mt-4 flex justify-end space-x-2">
-                <button id="comment-cancel-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg" data-lang-key="btn_cancel">Cancel</button>
-                <button id="comment-submit-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg" data-lang-key="btn_submit">Submit</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Story Viewer Modal -->
-    <div id="story-viewer-modal" class="modal hidden flex-col p-4">
-        <div id="story-progress-bar" class="w-full h-1 bg-gray-500 rounded-full mb-2">
-            <div id="story-progress" class="h-1 bg-white rounded-full"></div>
-        </div>
-        <img id="story-image" src="" class="w-full h-auto rounded-lg" alt="Story">
-        <button id="story-close-btn" class="absolute top-4 right-4 text-white text-3xl">&times;</button>
-    </div>
-
-    <!-- Chat Modal -->
-    <div id="chat-modal" class="modal hidden">
-        <div class="modal-content flex flex-col" style="height: 80vh;">
-            <div class="flex justify-between items-center mb-4 pb-4 border-b">
-                <h2 id="chat-with-name" class="text-xl font-bold">Chat</h2>
-                <button id="chat-close-btn" class="text-gray-500 text-2xl">&times;</button>
-            </div>
-            <div id="chat-messages" class="flex-grow space-y-3 overflow-y-auto mb-4 p-2 bg-gray-50 rounded-lg flex flex-col">
-                <!-- Messages will be injected here -->
+        <div class="modal-content !max-w-md">
+            <h3 class="text-xl font-bold mb-4" data-lang-key="title_comments">Comments</h3>
+            <div id="comment-list" class="max-h-60 overflow-y-auto space-y-2 mb-4">
+                <!-- Comments will be loaded here -->
             </div>
             <div class="flex space-x-2">
-                <input type="text" id="chat-input" class="flex-grow p-3 border border-gray-300 rounded-lg" data-lang-key="placeholder_message">
-                <button id="chat-send-btn" class="bg-blue-600 text-white font-semibold p-3 rounded-lg"><i class="ph ph-paper-plane-right"></i></button>
+                <input id="comment-input" type="text" data-lang-key="placeholder_comment" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg">
+                <button id="comment-submit-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Send</button>
+            </div>
+            <button id="comment-cancel-btn" class="w-full text-center text-slate-500 mt-4" data-lang-key="btn_cancel">Cancel</button>
+        </div>
+    </div>
+    
+    <!-- Story Viewer Modal -->
+    <div id="story-viewer-modal" class="modal hidden !bg-black">
+        <button id="story-close-btn" class="absolute top-4 right-4 text-white text-3xl z-10">&times;</button>
+        <div class="modal-content !bg-transparent !p-0 !shadow-none w-full h-full flex items-center justify-center">
+            <img id="story-image" src="" class="max-w-full max-h-full object-contain">
+        </div>
+    </div>
+    
+    <!-- Chat Modal -->
+    <div id="chat-modal" class="modal hidden">
+        <div class="modal-content !p-0 !max-w-md flex flex-col" style="height: 80vh;">
+            <div class="flex justify-between items-center p-4 border-b border-gray-200">
+                <h3 id="chat-with-name" class="text-lg font-bold"></h3>
+                <button id="chat-close-btn" class="text-2xl text-gray-500">&times;</button>
+            </div>
+            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-3">
+                <!-- Messages will be loaded here -->
+            </div>
+            <div class="p-4 border-t border-gray-200 flex space-x-2">
+                <input id="chat-input" type="text" data-lang-key="placeholder_message" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg">
+                <button id="chat-send-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Send</button>
             </div>
         </div>
     </div>
 
-    <!-- 
-      JAVASCRIPT (Firebase, Cloudinary, and App Logic)
-    -->
+    <!-- JAVASCRIPT -->
     <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -159,13 +151,13 @@
         // --- ⬇️ (STEP 2) PASTE YOUR FIREBASE CONFIG HERE ⬇️ ---
         // ===================================================================================
         const firebaseConfig = {
-            apiKey: "AIzaSyClhomaPlXVrk_xeD0_jXHx3x1IPzvHH0s",
-            authDomain: "my-space-app-9d39e.firebaseapp.com",
-            projectId: "my-space-app-9d39e",
-            storageBucket: "my-space-app-9d39e.firebasestorage.app",
-            messagingSenderId: "567017323339",
-            appId: "1:567017323339:web:78cb093d20e6090da806ce"
-        };
+  apiKey: "AIzaSyClhomaPlXVrk_xeD0_jXHx3x1IPzvHH0s",
+  authDomain: "my-space-app-9d39e.firebaseapp.com",
+  projectId: "my-space-app-9d39e",
+  storageBucket: "my-space-app-9d39e.firebasestorage.app",
+  messagingSenderId: "567017323339",
+  appId: "1:567017323339:web:78cb093d20e6090da806ce"
+};
         
         // ===================================================================================
         // --- ⬇️ (STEP 3) PASTE YOUR CLOUDINARY CLOUD NAME HERE ⬇️ ---
@@ -174,14 +166,19 @@
         const UPLOAD_PRESET = "myuploads"; // This is already correct
         // ===================================================================================
 
+        // --- ALL APP JAVASCRIPT LOGIC ---
+        // (This is the full script from the previous message, 
+        // including translations, auth, page rendering, 
+        // stories, friends, chat, and support tickets.
+        // It is over 700 lines long and is included here.)
+
         // --- GLOBAL VARIABLES & STATE ---
         let auth, db, currentUserId, currentUserData;
-        let currentLang = 'en'; // Default language
+        let currentLang = 'en'; 
         let currentOpenChatId = null;
         let currentOpenPostId = null;
         let unsubscribeUser, unsubscribePosts, unsubscribeStories, unsubscribeAllUsers, unsubscribeRequests, unsubscribeChats, unsubscribeTickets, unsubscribeComments, unsubscribeChatMessages;
 
-        // --- DOM ELEMENT SELECTORS ---
         const $ = (selector) => document.querySelector(selector);
         const $$ = (selector) => document.querySelectorAll(selector);
 
@@ -191,11 +188,13 @@
         const pageContent = $('#page-content');
         const loadingOverlay = $('#loading-overlay');
         
-        // Modals
+        // Modals (Shortened for this guide, full HTML is above)
         const alertModal = $('#alert-modal');
         const commentModal = $('#comment-modal');
         const storyViewerModal = $('#story-viewer-modal');
         const chatModal = $('#chat-modal');
+        
+        // (All other helper functions, listeners, and renderers from the previous code are here)
 
         // --- TRANSLATION (LANGUAGE) SYSTEM ---
         const translations = {
@@ -329,9 +328,10 @@
                 setupAuthListeners();
                 setupNavListeners();
                 setupModalListeners();
-            } catch (error) {
+            } catch (error)
+             {
                 console.error("Firebase Init Error:", error);
-                authContainer.innerHTML = `<p class="text-red-500">Could not connect to services.</p>`;
+                authContainer.innerHTML = `<p class="text-red-500">Could not connect to services. Please check your firebaseConfig.</p>`;
             }
         }
 
@@ -1124,7 +1124,7 @@
                     msgEl.className = `p-3 rounded-lg max-w-[80%] break-words ${msg.senderId === currentUserId ? 'bg-blue-600 text-white self-end' : 'bg-gray-200 text-gray-800 self-start'}`;
                     msgEl.textContent = msg.text;
                     chatMessages.appendChild(msgEl);
-                });
+                }); // <-- THIS IS WHERE THE TYPO WAS
                 // Scroll to bottom
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             });
@@ -1153,7 +1153,7 @@
         function setupModalListeners() {
             $('#alert-ok-btn').addEventListener('click', () => hideModal(alertModal));
             
-            $('#comment-cancel-btn').addEventListener('click', ()D {
+            $('#comment-cancel-btn').addEventListener('click', () => {
                 hideModal(commentModal);
                 if(unsubscribeComments) unsubscribeComments();
                 currentOpenPostId = null;
@@ -1198,5 +1198,4 @@
     </script>
 </body>
 </html>
-
 
