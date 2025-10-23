@@ -8,464 +8,259 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Phosphor Icons -->
+    <!-- Phosphor Icons (for modern icons) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
-        /* NEW: Dark Theme Base Styles (like X/Twitter) */
-        :root {
-            --bg-primary: #000000; /* Black background */
-            --bg-secondary: #16181C; /* Slightly lighter black for cards */
-            --text-primary: #E7E9EA; /* Off-white text */
-            --text-secondary: #71767B; /* Grey text */
-            --border-color: #2F3336; /* Dark grey borders */
-            --accent-blue: #1D9BF0; /* Twitter blue */
-            --accent-red: #F91880; /* Like button red */
-            --accent-green: #00BA7C; /* Verified green/accept */
+        /* All the CSS from the previous file goes here */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f0f2f5; 
+            -webkit-tap-highlight-color: transparent;
         }
-        html, body { height: 100%; margin: 0; } /* Ensure full height */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            -webkit-tap-highlight-color: transparent; /* Disable tap highlight on mobile */
-            display: flex; /* Use flexbox to center content */
-            justify-content: center; /* Center horizontally */
-            align-items: flex-start; /* Align items to the top */
-        }
-        #app-wrapper { /* New wrapper for max-width and centering */
-             width: 100%;
-             max-width: 600px; /* Max width like mobile apps */
-             min-height: 100%;
-             background-color: var(--bg-primary);
-             display: flex;
-             flex-direction: column;
-             position: relative; /* Needed for fixed nav */
-        }
-        /* Page transitions */
-        .page { display: none; width: 100%; flex-grow: 1; /* Allow pages to fill space */ }
-        /* FIX: Ensure only active page is truly displayed */
-        .page.active { display: flex; flex-direction: column; } /* Use flex for potential vertical centering */
-        #auth-container.active { display: flex; align-items: center; justify-content: center; } /* Center auth content */
-
-
-        /* Navigation */
-        nav#bottom-nav { /* Target nav specifically */
-            position: fixed; /* Keep nav at bottom */
-            bottom: 0;
-            left: 0;
-            right: 0;
-            max-width: 600px; /* Match wrapper width */
-            margin: 0 auto; /* Center nav */
-            z-index: 10; /* Keep nav on top */
-            background-color: var(--bg-primary);
-            border-top: 1px solid var(--border-color);
-        }
-         /* FIX: Hide nav when auth is active */
-        #auth-container.active ~ nav#bottom-nav { display: none; } /* Hide nav when auth active */
-        #app-container.active ~ nav#bottom-nav { display: flex; } /* Show nav only when app active */
-
+        .page { display: none; }
+        .page.active { display: block; }
         .nav-btn {
             flex: 1; padding-top: 8px; padding-bottom: 8px;
             display: flex; flex-direction: column; align-items: center;
-            font-size: 12px; color: var(--text-secondary); transition: color 0.2s ease-in-out;
-            position: relative; border: none; background: none; cursor: pointer;
+            font-size: 12px; color: #64748b; transition: all 0.2s ease-in-out;
         }
-        .nav-btn.active { color: var(--accent-blue); font-weight: 600; }
+        .nav-btn.active { color: #2563eb; font-weight: 600; }
         .nav-btn i { font-size: 24px; margin-bottom: 2px; }
-
-        .nav-badge { /* NEW: For message notifications */
-            position: absolute; top: 4px; right: calc(50% - 20px); /* Adjust positioning */
-            background-color: var(--accent-red); color: white;
-            font-size: 9px; font-weight: bold;
-            min-width: 16px; height: 16px; border-radius: 50%; padding: 0 4px;
-            display: flex; align-items: center; justify-content: center;
-            /* Hidden by default, shown by JS */
+        .auth-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .story-reel {
+            display: flex; overflow-x: auto; padding: 12px 0;
+            gap: 12px; white-space: nowrap; -ms-overflow-style: none;
+            scrollbar-width: none;
         }
-
-        /* Auth Page */
-        #auth-container { background: var(--bg-primary); }
-        #auth-container input, #auth-container select { background-color: #202327; border-color: var(--border-color); color: var(--text-primary); }
-        #auth-container select option { background-color: var(--bg-secondary); color: var(--text-primary); }
-        #auth-container button[type="submit"] { background-color: var(--accent-blue); } /* Target submit button */
-        #auth-container a, #auth-container button.link-style { color: var(--accent-blue); background: none; border: none; padding: 0; cursor: pointer; text-align: center; display: inline-block; } /* Style forgot password link */
-        #auth-container input[type="radio"] { accent-color: var(--accent-blue); }
-
-        /* Story Reel */
-        .story-reel { display: flex; overflow-x: auto; padding: 12px 0; gap: 12px; white-space: nowrap; -ms-overflow-style: none; scrollbar-width: none; }
         .story-reel::-webkit-scrollbar { display: none; }
         .story-item { cursor: pointer; width: 72px; flex-shrink: 0; }
-        .story-avatar { height: 64px; width: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 3px; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
-        .story-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; border: 2px solid var(--bg-primary); }
-
-        /* Loading Overlay */
-        #loading-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); align-items: center; justify-content: center; z-index: 100; transition: opacity 0.3s ease; }
-        .loader { width: 48px; height: 48px; border: 5px solid rgba(255,255,255,0.3); border-top-color: var(--accent-blue); border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
-        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Modals */
-        .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); align-items: center; justify-content: center; z-index: 50; transition: opacity 0.2s ease-in-out; padding: 1rem; }
-        .modal-content { background: var(--bg-secondary); padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; transform: scale(0.95); transition: all 0.2s ease-in-out; border: 1px solid var(--border-color); }
-        .modal:not(.hidden) .modal-content { transform: scale(1); }
-        .modal input, .modal textarea, .modal select { background-color: #202327; border-color: var(--border-color); color: var(--text-primary); }
-
-        /* General UI Elements */
-        .card { background-color: var(--bg-secondary); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: 1px solid var(--border-color); }
-        button { transition: background-color 0.2s ease, opacity 0.2s ease; cursor: pointer; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
-
-        /* Verified Badge */
-        .verified-badge { color: var(--accent-blue); display: inline-flex; margin-left: 4px; vertical-align: middle; }
-        .verified-badge i { font-size: 1.1em; }
-
-        /* Loading/Error states */
-        .placeholder-text { color: var(--text-secondary); }
-        .error-text { color: var(--accent-red); }
-
-        /* Ensure loader/modal display works correctly */
-        #loading-overlay:not(.hidden),
-        .modal:not(.hidden) { display: flex; }
-        .hidden { display: none !important; }
-
-         /* Post Menu */
-        .post-menu { position: absolute; right: 0; top: 100%; margin-top: 4px; width: 150px; background-color: var(--bg-secondary); border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 20; border: 1px solid var(--border-color); overflow: hidden; }
-        .post-menu button { display: block; width: 100%; text-align: left; padding: 10px 15px; font-size: 14px; color: var(--text-primary); background: none; border: none; }
-        .post-menu button:hover { background-color: #272a2e; }
-        .post-menu button.delete { color: var(--accent-red); }
-
-         /* General input styles for dark theme */
-        input[type="text"], input[type="email"], input[type="password"], input[type="date"], input[type="search"], textarea, select {
-            background-color: #202327;
-            border-color: var(--border-color);
-            color: var(--text-primary);
-            border-radius: 8px;
-            padding: 10px 15px;
-            width: 100%; border-width: 1px;
+        .story-avatar {
+            height: 64px; width: 64px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            padding: 3px;
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
         }
-        input::placeholder, textarea::placeholder { color: var(--text-secondary); }
-
-        /* Radio buttons */
-         input[type="radio"] {
-             appearance: none; background-color: #202327; margin: 0; font: inherit; color: var(--text-secondary);
-             width: 1.15em; height: 1.15em; border: 0.15em solid var(--text-secondary);
-             border-radius: 50%; transform: translateY(-0.075em); display: inline-grid; place-content: center; cursor: pointer;
-         }
-         input[type="radio"]::before { content: ""; width: 0.65em; height: 0.65em; border-radius: 50%; transform: scale(0); transition: 120ms transform ease-in-out; box-shadow: inset 1em 1em var(--accent-blue); }
-         input[type="radio"]:checked::before { transform: scale(1); }
-         input[type="radio"]:checked { border-color: var(--accent-blue); }
+        .story-avatar img {
+            width: 100%; height: 100%; object-fit: cover;
+            border-radius: 50%; border: 2px solid white;
+        }
+        #loading-overlay {
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100; transition: opacity 0.3s ease;
+        }
+        .loader {
+            width: 48px; height: 48px; border: 5px solid #FFF;
+            border-bottom-color: #2563eb; border-radius: 50%;
+            display: inline-block; box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Modal Base Styles */
+        .modal {
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 50;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .modal-content {
+            background: white; padding: 24px; border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%; max-width: 500px;
+            transform: scale(0.95);
+            transition: all 0.2s ease-in-out;
+        }
+        .modal:not(.hidden) .modal-content {
+            transform: scale(1);
+        }
     </style>
 </head>
-<body class="w-full max-w-xl mx-auto bg-black">
+<body class="w-full max-w-xl mx-auto bg-white">
 
-    <div id="app-wrapper">
-
-        <!-- Global Containers -->
-        <div id="loading-overlay" class=""><div class="loader"></div></div>
-
-        <div id="auth-container" class="page active w-full min-h-screen"></div>
-
-        <div id="app-container" class="page w-full min-h-screen bg-black">
-            <div id="page-content" class="" style="padding-bottom: 80px;"></div>
-        </div>
-
-        <!-- Bottom Navigation Bar - Starts hidden -->
-         <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 w-full max-w-xl mx-auto bg-black border-t border-gray-700 justify-around items-center h-16 hidden">
+    <!-- Global Containers -->
+    <div id="loading-overlay" class="hidden"><div class="loader"></div></div>
+    <div id="auth-container" class="page active w-full min-h-screen flex flex-col items-center justify-center p-4 auth-gradient"></div>
+    <div id="app-container" class="page w-full min-h-screen bg-gray-100">
+        <div id="page-content" class="p-4" style="padding-bottom: 80px;"></div>
+        <nav class="fixed bottom-0 left-0 right-0 w-full max-w-xl mx-auto bg-white border-t border-gray-200 flex justify-around items-center h-16">
             <button data-page="feed" class="nav-btn"><i class="ph-bold ph-house"></i><span data-lang-key="nav_feed">Feed</span></button>
-            <button data-page="friends" class="nav-btn"><i class="ph-bold ph-users-three"></i><span data-lang-key="nav_friends">People</span></button>
-            <button data-page="messages" class="nav-btn relative">
-                <i class="ph-bold ph-chats"></i><span data-lang-key="nav_messages">Messages</span>
-                <span id="nav-message-badge" class="nav-badge hidden">0</span>
-            </button>
+            <button data-page="friends" class="nav-btn"><i class="ph-bold ph-users-three"></i><span data-lang-key="nav_friends">Friends</span></button>
+            <button data-page="messages" class="nav-btn"><i class="ph-bold ph-chats"></i><span data-lang-key="nav_messages">Messages</span></button>
             <button data-page="profile" class="nav-btn"><i class="ph-bold ph-user"></i><span data-lang-key="nav_profile">Profile</span></button>
         </nav>
+    </div>
 
-
-        <!-- All Modals -->
-        <div id="alert-modal" class="modal hidden">
-            <div class="modal-content text-center">
-                <p id="alert-message" class="text-lg text-gray-100 mb-6"></p>
-                <button id="alert-ok-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg" data-lang-key="btn_ok">OK</button>
+    <!-- All Modals -->
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="modal hidden">
+        <div class="modal-content text-center">
+            <p id="alert-message" class="text-lg text-slate-700 mb-6"></p>
+            <button id="alert-ok-btn" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg" data-lang-key="btn_ok">OK</button>
+        </div>
+    </div>
+    
+    <!-- Comment Modal -->
+    <div id="comment-modal" class="modal hidden">
+        <div class="modal-content !max-w-md">
+            <h3 class="text-xl font-bold mb-4" data-lang-key="title_comments">Comments</h3>
+            <div id="comment-list" class="max-h-60 overflow-y-auto space-y-2 mb-4">
+                <!-- Comments will be loaded here -->
+            </div>
+            <div class="flex space-x-2">
+                <input id="comment-input" type="text" data-lang-key="placeholder_comment" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg">
+                <button id="comment-submit-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Send</button>
+            </div>
+            <button id="comment-cancel-btn" class="w-full text-center text-slate-500 mt-4" data-lang-key="btn_cancel">Cancel</button>
+        </div>
+    </div>
+    
+    <!-- Story Viewer Modal -->
+    <div id="story-viewer-modal" class="modal hidden !bg-black">
+        <button id="story-close-btn" class="absolute top-4 right-4 text-white text-3xl z-10">&times;</button>
+        <div class="modal-content !bg-transparent !p-0 !shadow-none w-full h-full flex items-center justify-center">
+            <img id="story-image" src="" class="max-w-full max-h-full object-contain">
+        </div>
+    </div>
+    
+    <!-- Chat Modal -->
+    <div id="chat-modal" class="modal hidden">
+        <div class="modal-content !p-0 !max-w-md flex flex-col" style="height: 80vh;">
+            <div class="flex justify-between items-center p-4 border-b border-gray-200">
+                <h3 id="chat-with-name" class="text-lg font-bold"></h3>
+                <button id="chat-close-btn" class="text-2xl text-gray-500">&times;</button>
+            </div>
+            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-3">
+                <!-- Messages will be loaded here -->
+            </div>
+            <div class="p-4 border-t border-gray-200 flex space-x-2">
+                <input id="chat-input" type="text" data-lang-key="placeholder_message" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg">
+                <button id="chat-send-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Send</button>
             </div>
         </div>
-
-        <div id="comment-modal" class="modal hidden">
-             <div class="modal-content !max-w-md">
-                 <h3 class="text-xl font-bold mb-4" data-lang-key="title_comments">Replies</h3>
-                 <div id="comment-list" class="max-h-60 overflow-y-auto space-y-3 mb-4 border-t border-b border-gray-700 py-2"></div>
-                 <div class="flex space-x-2">
-                     <input id="comment-input" type="text" data-lang-key="placeholder_comment" class="flex-1">
-                     <button id="comment-submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Send</button>
-                 </div>
-                 <button id="comment-cancel-btn" class="w-full text-center text-gray-400 mt-4 text-sm" data-lang-key="btn_cancel">Cancel</button>
-             </div>
-        </div>
-
-        <div id="story-viewer-modal" class="modal hidden !bg-black !bg-opacity-90">
-             <button id="story-close-btn" class="absolute top-4 right-4 text-white text-3xl z-10 p-2 bg-black bg-opacity-50 rounded-full">&times;</button>
-             <div class="modal-content !bg-transparent !p-0 !shadow-none w-full h-full flex items-center justify-center">
-                  <img id="story-image" src="" class="max-w-full max-h-full object-contain rounded-lg">
-             </div>
-        </div>
-
-        <div id="chat-modal" class="modal hidden">
-            <div class="modal-content !p-0 !max-w-md flex flex-col" style="height: 80vh;">
-                <div class="flex justify-between items-center p-4 border-b border-gray-700">
-                    <h3 id="chat-with-name" class="text-lg font-bold"></h3>
-                    <button id="chat-close-btn" class="text-2xl text-gray-400">&times;</button>
-                </div>
-                <div id="chat-messages" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-3 bg-black"></div>
-                <div class="p-4 border-t border-gray-700 flex space-x-2 bg-black">
-                    <input id="chat-input" type="text" data-lang-key="placeholder_message" class="flex-1">
-                    <button id="chat-send-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Send</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="edit-post-modal" class="modal hidden">
-             <div class="modal-content !max-w-md">
-                 <h3 class="text-xl font-bold mb-4" data-lang-key="btn_edit">Edit Post</h3>
-                 <textarea id="edit-post-input" class="w-full p-2" rows="5"></textarea>
-                 <div class="mt-4 flex justify-end space-x-2">
-                     <button id="edit-post-cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-gray-100 font-semibold py-2 px-4 rounded-lg" data-lang-key="btn_cancel">Cancel</button>
-                     <button id="edit-post-save-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg" data-lang-key="btn_save">Save</button>
-                 </div>
-             </div>
-        </div>
-
-        <div id="confirm-delete-modal" class="modal hidden">
-            <div class="modal-content text-center !max-w-xs">
-                <p id="confirm-delete-message" class="text-lg text-gray-100 mb-6"></p>
-                <div class="flex justify-center space-x-4">
-                     <button id="confirm-delete-cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-gray-100 font-semibold py-2 px-6 rounded-lg" data-lang-key="btn_cancel">Cancel</button>
-                     <button id="confirm-delete-confirm-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg" data-lang-key="btn_delete">Delete</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="forgot-password-modal" class="modal hidden">
-             <div class="modal-content !max-w-sm text-center">
-                 <h3 class="text-xl font-bold mb-4">Reset Password</h3>
-                 <p class="text-gray-400 text-sm mb-4">Enter your email address and we'll send you a link to reset your password.</p>
-                 <input type="email" id="forgot-email-input" placeholder="Your Email Address" class="w-full mb-4">
-                 <p id="forgot-error" class="error-text text-sm h-4 mb-4"></p>
-                 <div class="flex flex-col space-y-2">
-                      <button id="forgot-send-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Send Reset Link</button>
-                      <button id="forgot-cancel-btn" class="w-full text-gray-400 text-sm link-style" data-lang-key="btn_cancel">Cancel</button>
-                 </div>
-             </div>
-        </div>
-
-    </div> <!-- End of app-wrapper -->
-
+    </div>
 
     <!-- JAVASCRIPT -->
     <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, applyActionCode, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, onSnapshot, doc, serverTimestamp, setDoc, getDoc, updateDoc, orderBy, where, arrayUnion, arrayRemove, runTransaction, writeBatch, Timestamp, deleteDoc, getDocs, limit, startAfter } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, doc, serverTimestamp, setDoc, getDoc, updateDoc, orderBy, where, arrayUnion, arrayRemove, runTransaction, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ===================================================================================
-        // --- ⬇️ PASTE YOUR FIREBASE CONFIG HERE ⬇️ ---
+        // --- ⬇️ (STEP 2) PASTE YOUR FIREBASE CONFIG HERE ⬇️ ---
         // ===================================================================================
         const firebaseConfig = {
-            apiKey: "AIzaSyClhomaPlXVrk_xeD0_jXHx3x1IPzvHH0s",
-            authDomain: "my-space-app-9d39e.firebaseapp.com",
-            projectId: "my-space-app-9d39e",
-            storageBucket: "my-space-app-9d39e.firebasestorage.app",
-            messagingSenderId: "567017323339",
-            appId: "1:567017323339:web:78cb093d20e6090da806ce"
-        };
+  apiKey: "AIzaSyClhomaPlXVrk_xeD0_jXHx3x1IPzvHH0s",
+  authDomain: "my-space-app-9d39e.firebaseapp.com",
+  projectId: "my-space-app-9d39e",
+  storageBucket: "my-space-app-9d39e.firebasestorage.app",
+  messagingSenderId: "567017323339",
+  appId: "1:567017323339:web:78cb093d20e6090da806ce"
+};
+        
+        // ===================================================================================
+        // --- ⬇️ (STEP 3) PASTE YOUR CLOUDINARY CLOUD NAME HERE ⬇️ ---
+        // ===================================================================================
+        const CLOUD_NAME = "deobpcudu"; 
+        const UPLOAD_PRESET = "myuploads"; // This is already correct
+        // ===================================================================================
 
-        // ===================================================================================
-        // --- ⬇️ PASTE YOUR CLOUDINARY CLOUD NAME HERE ⬇️ ---
-        // ===================================================================================
-        const CLOUD_NAME = "deobpcudu";
-        const UPLOAD_PRESET = "myuploads";
-
-        // ===================================================================================
-        // --- ⬇️ (STEP 4) PASTE YOUR *OWN* ADMIN USER ID HERE (After you sign up!) ⬇️ ---
-        // ===================================================================================
-        const ADMIN_UID = "Etkvuh7LqDeT12Pj9TPGqjGQSix2"; // <-- PASTE YOUR ACTUAL UID HERE ONCE YOU SIGN UP!
-        // ===================================================================================
+        // --- ALL APP JAVASCRIPT LOGIC ---
+        // (This is the full script from the previous message, 
+        // including translations, auth, page rendering, 
+        // stories, friends, chat, and support tickets.
+        // It is over 700 lines long and is included here.)
 
         // --- GLOBAL VARIABLES & STATE ---
         let auth, db, currentUserId, currentUserData;
-        let currentLang = 'en';
+        let currentLang = 'en'; 
         let currentOpenChatId = null;
         let currentOpenPostId = null;
-        let currentItemToDelete = { type: null, id: null };
-        let unsubscribeUser, unsubscribePosts, unsubscribeStories, unsubscribeAllUsers, unsubscribeRequests, unsubscribeChats, unsubscribeTickets, unsubscribeComments, unsubscribeChatMessages, unsubscribeFollowing, unsubscribeFollowers;
-        let searchTimeout;
+        let unsubscribeUser, unsubscribePosts, unsubscribeStories, unsubscribeAllUsers, unsubscribeRequests, unsubscribeChats, unsubscribeTickets, unsubscribeComments, unsubscribeChatMessages;
 
-        // --- DOM ELEMENT SELECTORS ---
         const $ = (selector) => document.querySelector(selector);
         const $$ = (selector) => document.querySelectorAll(selector);
 
         // Containers
-        const appWrapper = $('#app-wrapper');
         const authContainer = $('#auth-container');
         const appContainer = $('#app-container');
         const pageContent = $('#page-content');
         const loadingOverlay = $('#loading-overlay');
-        const bottomNav = $('#bottom-nav');
-
-        // Modals
+        
+        // Modals (Shortened for this guide, full HTML is above)
         const alertModal = $('#alert-modal');
         const commentModal = $('#comment-modal');
         const storyViewerModal = $('#story-viewer-modal');
         const chatModal = $('#chat-modal');
-        const editPostModal = $('#edit-post-modal');
-        const confirmDeleteModal = $('#confirm-delete-modal');
-        const forgotPasswordModal = $('#forgot-password-modal');
+        
+        // (All other helper functions, listeners, and renderers from the previous code are here)
 
         // --- TRANSLATION (LANGUAGE) SYSTEM ---
         const translations = {
-             'en': {
-                 'login_title': 'Welcome Back', 'login_subtitle': 'Login to connect.',
-                 'signup_title': 'Create Account', 'signup_subtitle': 'Join the community.',
-                 'nav_feed': 'Feed', 'nav_friends': 'People', 'nav_messages': 'Messages', 'nav_profile': 'Profile', 'nav_settings': 'Settings',
-                 'placeholder_firstname': 'First Name', 'placeholder_surname': 'Surname', 'placeholder_dob': 'Date of Birth',
-                 'gender_male': 'Male', 'gender_female': 'Female',
-                 'placeholder_username': 'Choose a Username', 'placeholder_email': 'Email Address', 'placeholder_password': 'Password (min. 6 characters)',
-                 'btn_login': 'Login', 'btn_signup': 'Sign Up',
-                 'toggle_signup': "Don't have an account?", 'toggle_login': 'Already have an account?',
-                 'create_post_title': 'Create a Post', 'placeholder_post': "What's happening?",
-                 'btn_add_photo': 'Add Photo', 'btn_post': 'Post',
-                 'story_you': 'Add Story',
-                 'friends_title': 'Find People', 'friends_requests': 'Friend Requests', 'friends_my': 'My Friends', 'friends_following': 'Following', 'friends_followers': 'Followers',
-                 'placeholder_search': 'Search My Space...',
-                 'btn_add_friend': 'Add Friend', 'btn_pending': 'Pending', 'btn_accept': 'Accept', 'btn_friends': 'Friends', 'btn_follow': 'Follow', 'btn_unfollow': 'Unfollow',
-                 'profile_title': 'Profile', 'profile_help': 'Help & Support', 'profile_photos': 'Media', 'profile_settings': 'Settings',
-                 'btn_logout': 'Logout',
-                 'settings_title': 'Settings', 'settings_language': 'Language', 'settings_account': 'Account', 'settings_verify_email': 'Verify Email', 'settings_email_verified': 'Email Verified',
-                 'help_title': 'Help Center', 'help_submit_ticket': 'Submit a Ticket', 'help_my_tickets': 'My Tickets',
-                 'placeholder_complaint': 'Describe your issue...', 'btn_submit': 'Submit',
-                 'ticket_status_open': 'Open', 'ticket_status_resolved': 'Resolved', 'ticket_admin_reply': 'Admin Reply:',
-                 'title_comments': 'Replies', 'placeholder_comment': 'Post your reply...',
-                 'placeholder_message': 'Start a new message...',
-                 'btn_ok': 'OK', 'btn_cancel': 'Cancel', 'btn_save': 'Save', 'btn_delete': 'Delete', 'btn_edit': 'Edit',
-                 'confirm_delete_post': 'Delete Post?',
-                 'email_verification_sent': 'Verification email sent! Check your inbox (and spam folder).',
-                 'email_not_verified': 'Email not verified. Check inbox/spam or resend.',
-                 'loading': 'Loading...',
-                 'no_posts': 'No posts yet. Follow people or create your first post!',
-                 'no_stories': 'No recent stories.',
-                 'no_search_results': 'No users found matching that name.',
-                 'no_friend_requests': 'No new friend requests.',
-                 'no_friends': "You haven't added any friends yet.",
-                 'no_following': "You aren't following anyone yet.",
-                 'no_followers': "You don't have any followers yet.",
-                 'no_chats': 'No active chats. Start a conversation with a friend!',
-                 'no_photos': "You haven't posted any photos yet.",
-                 'no_tickets': 'No support tickets submitted.',
-                 // Error messages
-                 'error_invalid_email': 'Please enter a valid email address.',
-                 'error_weak_password': 'Password must be at least 6 characters.',
-                 'error_missing_email_pass': 'Email and password are required.',
-                 'error_login_failed': 'Incorrect email or password.',
-                 'error_email_in_use': 'This email is already registered. Please login.',
-                 'error_missing_password': 'Please enter your password.',
-                 'error_generic_auth': 'An authentication error occurred.',
-                 'error_password_reset': 'Could not send reset email. Please try again.',
-                 'error_user_not_found': 'No account found with that email address.'
-             },
-             'yo': { // Yoruba
-                 'login_title': 'Kaabo Pada', 'login_subtitle': 'Wọle lati sopọ.',
-                 'signup_title': 'Ṣẹda Iwe Ipamọ', 'signup_subtitle': 'Darapọ mọ agbegbe.',
-                 'nav_feed': 'Ifunni', 'nav_friends': 'Awọn Eniyan', 'nav_messages': 'Awọn ifiranṣẹ', 'nav_profile': 'Profaili', 'nav_settings': 'Ètò',
-                 'placeholder_firstname': 'Orukọ Akọkọ', 'placeholder_surname': 'Orukọ idile', 'placeholder_dob': 'Ọjọ ibi',
-                 'gender_male': 'Okunrin', 'gender_female': 'Obinrin',
-                 'placeholder_username': 'Yan Orukọ olumulo', 'placeholder_email': 'Adirẹsi imeeli', 'placeholder_password': 'Ọrọigbaniwọle (o kere 6)',
-                 'btn_login': 'Wọle', 'btn_signup': 'Forukọsilẹ',
-                 'toggle_signup': 'Ko ni iwe ipamọ bi?', 'toggle_login': 'O ti ni iwe ipamọ tẹlẹ?',
-                 'create_post_title': 'Ṣẹda Ifiweranṣẹ', 'placeholder_post': 'Kini n ṣẹlẹ?',
-                 'btn_add_photo': 'Fi Fọto kun', 'btn_post': 'Firanṣẹ',
-                 'story_you': 'Fi Itan kun',
-                 'friends_title': 'Wa Awọn Eniyan', 'friends_requests': 'Awọn ibeere Ọrẹ', 'friends_my': 'Awọn ọrẹ Mi', 'friends_following': 'Awọn ti N tẹle', 'friends_followers': 'Awọn ọmọlẹyin',
-                 'placeholder_search': 'Wa My Space...',
-                 'btn_add_friend': 'Fi Ọrẹ kun', 'btn_pending': 'Nduro', 'btn_accept': 'Gba', 'btn_friends': 'Ọrẹ', 'btn_follow': 'Tẹle', 'btn_unfollow': 'Yọ kuro',
-                 'profile_title': 'Profaili', 'profile_help': 'Iranlọwọ & Atilẹyin', 'profile_photos': 'Àwòrán', 'profile_settings': 'Ètò',
-                 'btn_logout': 'Jade',
-                 'settings_title': 'Ètò', 'settings_language': 'Ede', 'settings_account': 'Iwe Ipamọ', 'settings_verify_email': 'Daju Imeeli', 'settings_email_verified': 'Imeeli Ti Daju',
-                 'help_title': 'Ile-iṣẹ Iranlọwọ', 'help_submit_ticket': 'Fi Tiketi ranṣẹ', 'help_my_tickets': 'Awọn Tiketi Mi',
-                 'placeholder_complaint': 'Ṣe alaye ọrọ rẹ...', 'btn_submit': 'Firanṣẹ',
-                 'ticket_status_open': 'Ṣiṣi', 'ticket_status_resolved': 'Yanju', 'ticket_admin_reply': 'Idahun Abojuto:',
-                 'title_comments': 'Awọn Idahun', 'placeholder_comment': 'Fi idahun rẹ ranṣẹ...',
-                 'placeholder_message': 'Bẹrẹ ifiranṣẹ titun...',
-                 'btn_ok': 'O DARA', 'btn_cancel': 'Fagilee', 'btn_save': 'Fipamọ', 'btn_delete': 'Paarẹ', 'btn_edit': 'Ṣatunkọ',
-                 'confirm_delete_post': 'Pa Ifiweranṣẹ rẹ?',
-                 'email_verification_sent': 'Ifiranṣẹ ijẹrisi ti ranṣẹ! Jọwọ ṣayẹwo apo-iwọle rẹ (ati folda idoti).',
-                 'email_not_verified': 'Imeeli rẹ ko iti daju. Ṣayẹwo apo-iwọle/idoti rẹ tabi tun ranṣẹ.',
-                 'loading': 'N gberu...',
-                 'no_posts': 'Ko si ifiweranṣẹ sibẹsibẹ. Tẹle awọn eniyan tabi ṣẹda ifiweranṣẹ akọkọ rẹ!',
-                 'no_stories': 'Ko si awọn itan tuntun.',
-                 'no_search_results': 'Ko si awọn olumulo ti a ri ti o baamu orukọ yẹn.',
-                 'no_friend_requests': 'Ko si awọn ibeere ọrẹ tuntun.',
-                 'no_friends': "O ko iti ṣafikun awọn ọrẹ kankan.",
-                 'no_following': "O ko iti tẹle ẹnikẹni.",
-                 'no_followers': "Ko si ẹnikan ti o tẹle ọ sibẹsibẹ.",
-                 'no_chats': 'Ko si awọn iwiregbe ti nṣiṣe lọwọ. Bẹrẹ ibaraẹnisọrọ pẹlu ọrẹ kan!',
-                 'no_photos': "O ko iti fi awọn fọto kankan ranṣẹ.",
-                 'no_tickets': 'Ko si awọn tiketi atilẹyin ti a fi ranṣẹ.',
-                 'error_invalid_email': 'Jọwọ tẹ adirẹsi imeeli ti o tọ sii.',
-                 'error_weak_password': 'Ọrọigbaniwọle gbọdọ jẹ o kere ju awọn ohun kikọ 6 lọ.',
-                 'error_missing_email_pass': 'Imeeli ati ọrọ igbaniwọle jẹ dandan.',
-                 'error_login_failed': 'Imeeli tabi ọrọ igbaniwọle ti ko tọ.',
-                 'error_email_in_use': 'Imeeli yii ti forukọsilẹ tẹlẹ. Jọwọ wọle.',
-                 'error_missing_password': 'Jọwọ tẹ ọrọ igbaniwọle rẹ sii.',
-                 'error_generic_auth': 'Aṣiṣe ijẹrisi kan ṣẹlẹ.',
-                 'error_password_reset': 'Ko le fi imeeli atunto ranṣẹ. Jọwọ gbiyanju lẹẹkansi.',
-                 'error_user_not_found': 'Ko si akọọlẹ ti a ri pẹlu adirẹsi imeeli yẹn.'
-             },
-              'fr': {
-                 'login_title': 'Bon Retour', 'login_subtitle': 'Connectez-vous.',
-                 'signup_title': 'Créer un Compte', 'signup_subtitle': 'Rejoignez la communauté.',
-                 'nav_feed': 'Fil', 'nav_friends': 'Personnes', 'nav_messages': 'Messages', 'nav_profile': 'Profil', 'nav_settings': 'Paramètres',
-                 'placeholder_firstname': 'Prénom', 'placeholder_surname': 'Nom', 'placeholder_dob': 'Date de naissance',
-                 'gender_male': 'Homme', 'gender_female': 'Femme',
-                 'placeholder_username': 'Choisissez un pseudo', 'placeholder_email': 'Adresse e-mail', 'placeholder_password': 'Mot de passe (min 6)',
-                 'btn_login': 'Connexion', 'btn_signup': "S'inscrire",
-                 'toggle_signup': 'Pas de compte?', 'toggle_login': 'Déjà un compte?',
-                 'create_post_title': 'Créer une publication', 'placeholder_post': 'Quoi de neuf?',
-                 'btn_add_photo': 'Ajouter Photo', 'btn_post': 'Publier',
-                 'story_you': 'Ajouter Story',
-                 'friends_title': 'Trouver des Personnes', 'friends_requests': "Demandes d'amis", 'friends_my': 'Mes Amis', 'friends_following': 'Abonnements', 'friends_followers': 'Abonnés',
-                 'placeholder_search': 'Rechercher sur My Space...',
-                 'btn_add_friend': 'Ajouter Ami', 'btn_pending': 'En attente', 'btn_accept': 'Accepter', 'btn_friends': 'Amis', 'btn_follow': 'Suivre', 'btn_unfollow': 'Ne plus suivre',
-                 'profile_title': 'Profil', 'profile_help': 'Aide & Support', 'profile_photos': 'Média', 'profile_settings': 'Paramètres',
-                 'btn_logout': 'Déconnexion',
-                 'settings_title': 'Paramètres', 'settings_language': 'Langue', 'settings_account': 'Compte', 'settings_verify_email': "Vérifier l'email", 'settings_email_verified': 'Email Vérifié',
-                 'help_title': "Centre d'aide", 'help_submit_ticket': 'Envoyer un ticket', 'help_my_tickets': 'Mes Tickets',
-                 'placeholder_complaint': 'Décrivez votre problème...', 'btn_submit': 'Envoyer',
-                 'ticket_status_open': 'Ouvert', 'ticket_status_resolved': 'Résolu', 'ticket_admin_reply': 'Réponse Admin:',
-                 'title_comments': 'Réponses', 'placeholder_comment': 'Publier votre réponse...',
-                 'placeholder_message': 'Commencer un nouveau message...',
-                 'btn_ok': 'OK', 'btn_cancel': 'Annuler', 'btn_save': 'Enregistrer', 'btn_delete': 'Supprimer', 'btn_edit': 'Modifier',
-                 'confirm_delete_post': 'Supprimer la publication?',
-                 'email_verification_sent': 'Email de vérification envoyé! Veuillez vérifier votre boîte de réception (et spam).',
-                 'email_not_verified': "Email non vérifié. Vérifiez boîte/spam ou renvoyez.",
-                 'loading': 'Chargement...',
-                 'no_posts': 'Aucune publication pour le moment. Suivez des personnes ou créez votre première publication!',
-                 'no_stories': 'Aucune story récente.',
-                 'no_search_results': 'Aucun utilisateur trouvé correspondant à ce nom.',
-                 'no_friend_requests': "Aucune nouvelle demande d'ami.",
-                 'no_friends': "Vous n'avez pas encore ajouté d'amis.",
-                 'no_following': "Vous ne suivez personne pour le moment.",
-                 'no_followers': "Vous n'avez pas encore d'abonnés.",
-                 'no_chats': 'Aucune discussion active. Commencez une conversation avec un ami!',
-                 'no_photos': "Vous n'avez pas encore publié de photos.",
-                 'no_tickets': 'Aucun ticket de support soumis.',
-                 'error_invalid_email': 'Veuillez saisir une adresse e-mail valide.',
-                 'error_weak_password': 'Le mot de passe doit comporter au moins 6 caractères.',
-                 'error_missing_email_pass': "L'email et le mot de passe sont requis.",
-                 'error_login_failed': 'Email ou mot de passe incorrect.',
-                 'error_email_in_use': 'Cet email est déjà enregistré. Veuillez vous connecter.',
-                 'error_missing_password': 'Veuillez entrer votre mot de passe.',
-                 'error_generic_auth': "Une erreur d'authentification s'est produite.",
-                 'error_password_reset': "Impossible d'envoyer l'e-mail de réinitialisation. Veuillez réessayer.",
-                 'error_user_not_found': 'Aucun compte trouvé avec cette adresse e-mail.'
-              }
+            'en': {
+                'login_title': 'Welcome to My Space', 'login_subtitle': 'Login to connect.',
+                'signup_title': 'Create Your Account', 'signup_subtitle': 'Join the community.',
+                'nav_feed': 'Feed', 'nav_friends': 'Friends', 'nav_messages': 'Messages', 'nav_profile': 'Profile',
+                'placeholder_username': 'Choose a Username', 'placeholder_email': 'Email Address', 'placeholder_password': 'Password (min. 6 characters)',
+                'btn_login': 'Login', 'btn_signup': 'Sign Up',
+                'toggle_signup': "Don't have an account?", 'toggle_login': 'Already have an account?',
+                'create_post_title': 'Create a Post', 'placeholder_post': "What's on your mind?",
+                'btn_add_photo': 'Add Photo', 'btn_post': 'Post',
+                'story_you': 'Your Story',
+                'friends_title': 'Find Friends', 'friends_requests': 'Friend Requests', 'friends_my': 'My Friends',
+                'btn_add_friend': 'Add', 'btn_pending': 'Pending', 'btn_accept': 'Accept', 'btn_friends': 'Friends',
+                'profile_title': 'My Profile', 'profile_help': 'Help & Support', 'profile_photos': 'My Photos',
+                'btn_logout': 'Logout',
+                'help_title': 'Help Center', 'help_submit_ticket': 'Submit a Ticket', 'help_my_tickets': 'My Tickets',
+                'placeholder_complaint': 'Describe your issue...', 'btn_submit': 'Submit',
+                'ticket_status_open': 'Open', 'ticket_status_resolved': 'Resolved', 'ticket_admin_reply': 'Admin Reply:',
+                'title_comments': 'Comments', 'placeholder_comment': 'Write a comment...',
+                'placeholder_message': 'Type a message...',
+                'btn_ok': 'OK', 'btn_cancel': 'Cancel'
+            },
+            'yo': { // Yoruba
+                'login_title': 'Kaabo si My Space', 'login_subtitle': 'Wọle lati sopọ.',
+                'signup_title': 'Ṣẹda Iwe Ipamọ Rẹ', 'signup_subtitle': 'Darapọ mọ agbegbe.',
+                'nav_feed': 'Ifunni', 'nav_friends': 'Awọn ọrẹ', 'nav_messages': 'Awọn ifiranṣẹ', 'nav_profile': 'Profaili',
+                'placeholder_username': 'Yan Orukọ olumulo', 'placeholder_email': 'Adirẹsi imeeli', 'placeholder_password': 'Ọrọigbaniwọle (o kere 6)',
+                'btn_login': 'Wọle', 'btn_signup': 'Forukọsilẹ',
+                'toggle_signup': 'Ko ni iwe ipamọ bi?', 'toggle_login': 'O ti ni iwe ipamọ tẹlẹ?',
+                'create_post_title': 'Ṣẹda Ifiweranṣẹ', 'placeholder_post': 'Kini o wa ni ọkan rẹ?',
+                'btn_add_photo': 'Fi Fọto kun', 'btn_post': 'Firanṣẹ',
+                'story_you': 'Itan Rẹ',
+                'friends_title': 'Wa Awọn ọrẹ', 'friends_requests': 'Awọn ibeere Ọrẹ', 'friends_my': 'Awọn ọrẹ Mi',
+                'btn_add_friend': 'Fi kun', 'btn_pending': 'Nduro', 'btn_accept': 'Gba', 'btn_friends': 'Ọrẹ',
+                'profile_title': 'Profaili Mi', 'profile_help': 'Iranlọwọ & Atilẹyin', 'profile_photos': 'Awọn fọto Mi',
+                'btn_logout': 'Jade',
+                'help_title': 'Ile-iṣẹ Iranlọwọ', 'help_submit_ticket': 'Fi Tiketi ranṣẹ', 'help_my_tickets': 'Awọn Tiketi Mi',
+                'placeholder_complaint': 'Ṣe alaye ọrọ rẹ...', 'btn_submit': 'Firanṣẹ',
+                'ticket_status_open': 'Ṣiṣi', 'ticket_status_resolved': 'Yanju', 'ticket_admin_reply': 'Idahun Abojuto:',
+                'title_comments': 'Awọn asọye', 'placeholder_comment': 'Kọ asọye kan...',
+                'placeholder_message': 'Kọ ifiranṣẹ kan...',
+                'btn_ok': 'O DARA', 'btn_cancel': 'Fagilee'
+            },
+            'fr': { // French
+                'login_title': 'Bienvenue sur My Space', 'login_subtitle': 'Connectez-vous.',
+                'signup_title': 'Créez votre compte', 'signup_subtitle': 'Rejoignez la communauté.',
+                'nav_feed': 'Fil', 'nav_friends': 'Amis', 'nav_messages': 'Messages', 'nav_profile': 'Profil',
+                'placeholder_username': 'Choisissez un pseudo', 'placeholder_email': 'Adresse e-mail', 'placeholder_password': 'Mot de passe (min 6)',
+                'btn_login': 'Connexion', 'btn_signup': "S'inscrire",
+                'toggle_signup': 'Pas de compte?', 'toggle_login': 'Déjà un compte?',
+                'create_post_title': 'Créer une publication', 'placeholder_post': 'Quoi de neuf?',
+                'btn_add_photo': 'Ajouter Photo', 'btn_post': 'Publier',
+                'story_you': 'Votre Story',
+                'friends_title': 'Trouver des Amis', 'friends_requests': "Demandes d'amis", 'friends_my': 'Mes Amis',
+                'btn_add_friend': 'Ajouter', 'btn_pending': 'En attente', 'btn_accept': 'Accepter', 'btn_friends': 'Amis',
+                'profile_title': 'Mon Profil', 'profile_help': 'Aide & Support', 'profile_photos': 'Mes Photos',
+                'btn_logout': 'Déconnexion',
+                'help_title': "Centre d'aide", 'help_submit_ticket': 'Envoyer un ticket', 'help_my_tickets': 'Mes Tickets',
+                'placeholder_complaint': 'Décrivez votre problème...', 'btn_submit': 'Envoyer',
+                'ticket_status_open': 'Ouvert', 'ticket_status_resolved': 'Résolu', 'ticket_admin_reply': 'Réponse Admin:',
+                'title_comments': 'Commentaires', 'placeholder_comment': 'Écrire un commentaire...',
+                'placeholder_message': 'Écrire un message...',
+                'btn_ok': 'OK', 'btn_cancel': 'Annuler'
+            }
         };
 
         const translatePage = () => {
@@ -474,88 +269,38 @@
                 const key = el.dataset.langKey;
                 if (langDict[key]) {
                     if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                        if (el.type !== 'date') {
-                             el.placeholder = langDict[key];
-                        }
-                    } else if (el.tagName === 'OPTION') {
-                         // Skip options
+                        el.placeholder = langDict[key];
                     } else {
-                        // Use innerHTML to allow embedding icons
-                        el.innerHTML = langDict[key];
+                        el.textContent = langDict[key];
                     }
-                } else {
-                     if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && el.tagName !== 'OPTION') {
-                        // el.innerHTML = `??${key}??`; // For debugging missing keys
-                     }
                 }
             });
-            // Update select values
-            const langSelectAuth = $('#lang-select-auth'); if (langSelectAuth) langSelectAuth.value = currentLang;
-            const langSelectSettings = $('#lang-select-settings'); if (langSelectSettings) langSelectSettings.value = currentLang;
         };
 
         const setLanguage = async (lang) => {
-            if (!translations[lang]) lang = 'en';
             currentLang = lang;
             localStorage.setItem('my-space-lang', lang);
-            if (currentUserId && db) {
+            if (currentUserId) {
                 try {
                     const userDocRef = doc(db, 'users', currentUserId);
-                    const userDocSnap = await getDoc(userDocRef);
-                    if(userDocSnap.exists()) {
-                         await updateDoc(userDocRef, { preferredLanguage: lang });
-                    }
+                    await updateDoc(userDocRef, { preferredLanguage: lang });
                 } catch (e) { console.error("Could not save language preference:", e); }
             }
-            translatePage(); // Always translate UI after setting language
+            translatePage();
         };
 
-        // --- HELPER FUNCTIONS ---
-        const showLoader = () => { if(loadingOverlay) loadingOverlay.classList.remove('hidden'); }
-        const hideLoader = () => { if(loadingOverlay) loadingOverlay.classList.add('hidden'); }
-        const showAlert = (messageKey) => {
-             const message = translations[currentLang][messageKey] || messageKey;
-            const msgEl = $('#alert-message');
-            if (msgEl) msgEl.textContent = message;
-            showModal(alertModal);
+        // --- HELPER FUNCTIONS (Modals, Loaders) ---
+        const showLoader = (message = '') => loadingOverlay.classList.remove('hidden');
+        const hideLoader = () => loadingOverlay.classList.add('hidden');
+        const showAlert = (message) => {
+            $('#alert-message').textContent = message;
+            alertModal.classList.remove('hidden');
         };
-        const showModal = (modalEl) => { if(modalEl) modalEl.classList.remove('hidden'); };
-        const hideModal = (modalEl) => { if(modalEl) modalEl.classList.add('hidden'); };
+        const showModal = (modalEl) => modalEl.classList.remove('hidden');
+        const hideModal = (modalEl) => modalEl.classList.add('hidden');
 
-        const renderVerifiedBadge = (userData) => {
-            if (userData?.role === 'admin' || userData?.isVerified === true) {
-                return `<span class="verified-badge" title="Verified"><i class="ph-fill ph-seal-check"></i></span>`;
-            }
-            return '';
-        };
-
-        const formatDate = (timestamp) => {
-             if (!timestamp?.toDate) return '';
-             const date = timestamp.toDate();
-             const now = new Date();
-             const diffSeconds = Math.round((now - date) / 1000);
-             const diffMinutes = Math.round(diffSeconds / 60);
-             const diffHours = Math.round(diffMinutes / 60);
-             const diffDays = Math.round(diffHours / 24);
-
-             if (diffSeconds < 60) return `${diffSeconds}s`;
-             if (diffMinutes < 60) return `${diffMinutes}m`;
-             if (diffHours < 24) return `${diffHours}h`;
-             if (diffDays < 7) return `${diffDays}d`;
-             return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        };
-
-        // --- CLOUDINARY UPLOAD ---
+        // --- CLOUDINARY IMAGE UPLOAD ---
         const uploadImageToCloudinary = async (file) => {
-             if (!file) throw new Error("No file provided for upload.");
-             // Basic client-side validation
-             if (!file.type.startsWith('image/')) {
-                 throw new Error("Please select an image file.");
-             }
-             if (file.size > 10 * 1024 * 1024) { // Limit to 10MB
-                 throw new Error("Image file size must be less than 10MB.");
-             }
-
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', UPLOAD_PRESET);
@@ -563,684 +308,893 @@
                 method: 'POST',
                 body: formData
             });
-            if (!response.ok) {
-                 const errorText = await response.text();
-                 console.error("Cloudinary Upload Error:", errorText);
-                 throw new Error('Image upload failed.');
-             }
+            if (!response.ok) throw new Error('Image upload failed.');
             const data = await response.json();
-            if (!data.secure_url) {
-                console.error("Cloudinary response missing secure_url:", data);
-                throw new Error('Image upload failed to return URL.');
-            }
             return data.secure_url;
         };
 
         // --- APP INITIALIZATION ---
         function init() {
-            console.log("App initializing...");
-            showLoader(); // Show loader immediately
+            // Check for saved language on load
             const savedLang = localStorage.getItem('my-space-lang') || 'en';
             setLanguage(savedLang);
-            renderAuthPage(); // Render auth structure
 
+            renderAuthPage(); // Render initial auth page
+            
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
-                console.log("Firebase initialized successfully.");
-                setupAuthListeners(); // This handles showing content/hiding loader
+                setupAuthListeners();
                 setupNavListeners();
                 setupModalListeners();
-            } catch (error) {
+            } catch (error)
+             {
                 console.error("Firebase Init Error:", error);
-                authContainer.innerHTML = `<div class="card p-4 text-center error-text">Could not connect. Check console & config.</div>`;
-                hideLoader();
+                authContainer.innerHTML = `<p class="text-red-500">Could not connect to services. Please check your firebaseConfig.</p>`;
             }
         }
 
         // --- AUTHENTICATION ---
         function setupAuthListeners() {
-             onAuthStateChanged(auth, user => {
-                 stopAllPageListeners(true); // Keep user listener potentially active
-                 if (user) {
-                     console.log("User logged IN:", user.uid, "Verified:", user.emailVerified);
-                     currentUserId = user.uid;
-                     listenToUserData((initialLoad) => {
-                         if (initialLoad) {
-                             console.log("Initial user data loaded, showing app.");
-                             authContainer.classList.remove('active');
-                             appContainer.classList.add('active');
-                             bottomNav.classList.remove('hidden');
-                             bottomNav.classList.add('flex');
-                             showPage('feed');
-                             hideLoader();
-                         }
-                         // Update verification status UI if settings page is active
-                         if ($('#settings-page-content')) { // Use a more specific ID if possible
-                              updateVerificationStatusUI(user.emailVerified);
-                         }
-                     });
-                 } else {
-                     console.log("User logged OUT");
-                     currentUserId = null;
-                     currentUserData = null;
-                     authContainer.classList.add('active');
-                     appContainer.classList.remove('active');
-                     bottomNav.classList.add('hidden');
-                     bottomNav.classList.remove('flex');
-                     renderAuthPage(); // Re-render auth page fully on logout
-                     hideLoader();
-                 }
-             }, (error) => {
-                  console.error("Auth State Error:", error);
-                  authContainer.innerHTML = `<div class="card p-4 text-center error-text">Authentication error. Please refresh.</div>`;
-                  hideLoader();
-             });
+            onAuthStateChanged(auth, user => {
+                // Detach all old listeners
+                if (unsubscribeUser) unsubscribeUser();
+                if (unsubscribePosts) unsubscribePosts();
+                if (unsubscribeStories) unsubscribeStories();
+                if (unsubscribeAllUsers) unsubscribeAllUsers();
+                if (unsubscribeRequests) unsubscribeRequests();
+                if (unsubscribeChats) unsubscribeChats();
+                if (unsubscribeTickets) unsubscribeTickets;
+
+                if (user) {
+                    currentUserId = user.uid;
+                    authContainer.classList.remove('active');
+                    appContainer.classList.add('active');
+                    listenToUserData(); // This will fetch user and their lang pref
+                    showPage('feed'); // Default page after login
+                } else {
+                    currentUserId = null;
+                    currentUserData = null;
+                    authContainer.classList.add('active');
+                    appContainer.classList.remove('active');
+                    renderAuthPage(); // Re-render auth page on logout
+                }
+            });
         }
 
         const handleAuthAction = async () => {
-             const emailInput = $('#email');
-             const passwordInput = $('#password');
-             const authErrorEl = $('#auth-error');
-
-             if (!emailInput || !passwordInput || !authErrorEl) return;
-
-             const email = emailInput.value.trim(), password = passwordInput.value;
-             authErrorEl.textContent = '';
-
-             if (!email || !password) { authErrorEl.textContent = translations[currentLang]['error_missing_email_pass']; return; }
-             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { authErrorEl.textContent = translations[currentLang]['error_invalid_email']; return; }
-
-             showLoader();
-             try {
-                 if (isSignupMode) {
-                     const usernameInput = $('#username');
-                     const firstNameInput = $('#firstName');
-                     const surnameInput = $('#surname');
-                     const dobInput = $('#dob');
-                     const genderInput = $('input[name="gender"]:checked');
-
-                     if (!usernameInput || !firstNameInput || !surnameInput || !dobInput || !genderInput) throw new Error("Sign-up form incomplete. Please fill all fields.");
-
-                     const username = usernameInput.value.trim();
-                     const firstName = firstNameInput.value.trim();
-                     const surname = surnameInput.value.trim();
-                     const dob = dobInput.value;
-                     const gender = genderInput.value;
-
-                     if (username.length < 3) throw new Error('Username must be at least 3 characters.');
-                     if (!firstName || !surname) throw new Error('First and Last name are required.');
-                     if (!dob) throw new Error('Date of Birth is required.');
-                     if (password.length < 6) throw new Error(translations[currentLang]['error_weak_password']);
-
-
-                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                     const userDocRef = doc(db, 'users', userCredential.user.uid);
-
-                     const newUserProfile = {
-                         username: username, email: email, firstName: firstName, surname: surname,
-                         dob: dob, gender: gender,
-                         profilePictureUrl: `https://placehold.co/100x100/374151/E7E9EA?text=${username.charAt(0).toUpperCase()}`,
-                         preferredLanguage: currentLang,
-                         friends: [], friendRequests: [], friendRequestsSent: [],
-                         following: ADMIN_UID && ADMIN_UID !== userCredential.user.uid && ADMIN_UID.length > 5 ? [ADMIN_UID] : [],
-                         followers: [], isVerified: false, role: 'user'
-                     };
-                     await setDoc(userDocRef, newUserProfile);
-
-                     // Make admin follow back
-                     if (ADMIN_UID && ADMIN_UID !== userCredential.user.uid && ADMIN_UID.length > 5) {
-                         try {
-                             const adminRef = doc(db, 'users', ADMIN_UID);
-                              await updateDoc(adminRef, { following: arrayUnion(userCredential.user.uid) })
-                                 .catch(err => console.warn("Could not make admin follow back:", err));
-                         } catch (adminFollowError) { console.warn("Error making admin follow back:", adminFollowError); }
-                     }
-
-                     await sendEmailVerification(userCredential.user);
-                     showAlert('email_verification_sent');
-                     // Let onAuthStateChanged handle UI switch
-
-                 } else { // Login Mode
-                     await signInWithEmailAndPassword(auth, email, password);
-                     // onAuthStateChanged handles UI switch and loader hiding
-                 }
-             } catch (error) {
-                 console.error("Auth Action Error:", error);
-                 let messageKey = 'error_generic_auth'; // Default
-                 if (error.code === 'auth/email-already-in-use') { messageKey = 'error_email_in_use'; }
-                 else if (error.code === 'auth/invalid-email') { messageKey = 'error_invalid_email'; }
-                 else if (error.code === 'auth/weak-password') { messageKey = 'error_weak_password'; }
-                 else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') { messageKey = 'error_login_failed'; }
-                 else if (error.code === 'auth/missing-password') { messageKey = 'error_missing_password';}
-
-                 authErrorEl.textContent = translations[currentLang][messageKey] || error.message; // Show translated or original
-                 hideLoader(); // Hide loader ONLY on error here
-             }
-             // No finally hideLoader() here - let onAuthStateChanged handle success case
+            const email = $('#email').value, password = $('#password').value;
+            const authErrorEl = $('#auth-error');
+            authErrorEl.textContent = '';
+            showLoader();
+            try {
+                if (isSignupMode) {
+                    const username = $('#username').value;
+                    if (username.trim().length < 3) throw new Error('Username must be at least 3 characters.');
+                    
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const userDocRef = doc(db, 'users', userCredential.user.uid);
+                    await setDoc(userDocRef, {
+                        username: username,
+                        email: email,
+                        profilePictureUrl: `https://placehold.co/100x100/e2e8f0/cbd5e1?text=${username.charAt(0).toUpperCase()}`,
+                        preferredLanguage: currentLang,
+                        friends: [],
+                        friendRequests: []
+                    });
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
+            } catch (error) {
+                authErrorEl.textContent = error.message;
+            } finally {
+                hideLoader();
+            }
         };
-
+        
         let isSignupMode = false;
         const toggleAuthMode = () => {
-             isSignupMode = !isSignupMode;
-             renderAuthPage();
+            isSignupMode = !isSignupMode;
+            renderAuthPage();
         };
-
-        const handleForgotPassword = async () => {
-             const emailInput = $('#forgot-email-input');
-             const errorEl = $('#forgot-error');
-             if (!emailInput || !errorEl) return;
-             const email = emailInput.value.trim();
-             errorEl.textContent = '';
-
-             if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                 errorEl.textContent = translations[currentLang]['error_invalid_email'];
-                 return;
-             }
-
-             showLoader();
-             try {
-                 await sendPasswordResetEmail(auth, email);
-                 hideModal(forgotPasswordModal);
-                 showAlert('Password reset email sent! Check your inbox (and spam).');
-             } catch (error) {
-                 console.error("Forgot Password Error:", error);
-                  let messageKey = 'error_password_reset';
-                  if(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email'){
-                       messageKey = 'error_user_not_found';
-                  }
-                 errorEl.textContent = translations[currentLang][messageKey];
-             } finally {
-                 hideLoader();
-             }
-        };
-
 
         // --- NAVIGATION & PAGE RENDERING ---
         function setupNavListeners() {
-             if(bottomNav) {
-                 bottomNav.addEventListener('click', e => {
-                     const navBtn = e.target.closest('.nav-btn');
-                     if (navBtn && !navBtn.disabled) {
-                         const page = navBtn.dataset.page;
-                         showPage(page);
-                     }
-                 });
-             }
-         }
+            $('nav').addEventListener('click', e => {
+                const navBtn = e.target.closest('.nav-btn');
+                if (navBtn) {
+                    const page = navBtn.dataset.page;
+                    showPage(page);
+                }
+            });
+        }
 
         function showPage(pageId) {
-             console.log("Showing page:", pageId);
-             if (!currentUserId && pageId !== 'auth') {
-                 console.log("Not logged in, rendering auth");
-                  renderAuthPage();
-                  authContainer.classList.add('active');
-                  appContainer.classList.remove('active');
-                  bottomNav.classList.add('hidden');
-                  bottomNav.classList.remove('flex');
-                  hideLoader();
-                  return;
-             }
-
-            // Ensure app container is active if logged in
-            if (currentUserId && !appContainer.classList.contains('active')) {
-                 authContainer.classList.remove('active');
-                 appContainer.classList.add('active');
-                 bottomNav.classList.remove('hidden');
-                 bottomNav.classList.add('flex');
-            }
-
-
             $$('.nav-btn').forEach(btn => btn.classList.remove('active'));
             const activeBtn = $(`.nav-btn[data-page="${pageId}"]`);
             if(activeBtn) activeBtn.classList.add('active');
+            
+            // Detach old listeners before rendering new page
+            stopAllPageListeners();
 
-            stopAllPageListeners(true); // Keep user listener active
+            if (pageId === 'feed') renderFeedPage();
+            else if (pageId === 'friends') renderFriendsPage();
+            else if (pageId === 'messages') renderMessagesPage();
+            else if (pageId === 'profile') renderProfilePage();
 
-            // Render new page content inside #page-content
-            // Use try...catch for render functions to prevent app crash on render error
-            try {
-                if (pageId === 'feed') renderFeedPage();
-                else if (pageId === 'friends') renderFriendsPage();
-                else if (pageId === 'messages') renderMessagesPage();
-                else if (pageId === 'profile') renderProfilePage();
-                else if (pageId === 'settings') renderSettingsPage();
-                else { // Fallback if pageId is invalid or auth
-                     if (currentUserId) { console.log("Invalid page, defaulting to feed"); renderFeedPage(); $(`.nav-btn[data-page="feed"]`)?.classList.add('active'); }
-                     else { console.log("Invalid page, defaulting to auth"); renderAuthPage(); }
-                }
-                translatePage(); // Ensure new page content is translated
-            } catch (renderError) {
-                 console.error(`Error rendering page ${pageId}:`, renderError);
-                 pageContent.innerHTML = `<div class="card p-4 text-center error-text">Error loading page content. Please try refreshing.</div>`;
-                 hideLoader(); // Hide loader if render fails
-            }
+            translatePage(); // Re-translate new content
+        }
+        
+        function stopAllPageListeners() {
+            // This stops all realtime listeners when changing pages
+            if (unsubscribePosts) unsubscribePosts();
+            if (unsubscribeStories) unsubscribeStories();
+            if (unsubscribeAllUsers) unsubscribeAllUsers();
+            if (unsubscribeRequests) unsubscribeRequests();
+            if (unsubscribeChats) unsubscribeChats();
+            if (unsubscribeTickets) unsubscribeTickets;
+            if (unsubscribeComments) unsubscribeComments();
+            if (unsubscribeChatMessages) unsubscribeChatMessages();
+            pageContent.innerHTML = ''; // Clear old content
         }
 
-        function stopAllPageListeners(keepUserListener = false) {
-             console.log("Stopping listeners, keepUser:", keepUserListener);
-            if (!keepUserListener && unsubscribeUser) { console.log("Unsub User"); unsubscribeUser(); unsubscribeUser = null; }
-            if (unsubscribePosts) { console.log("Unsub Posts"); unsubscribePosts(); unsubscribePosts = null; }
-            if (unsubscribeStories) { console.log("Unsub Stories"); unsubscribeStories(); unsubscribeStories = null; }
-            if (unsubscribeAllUsers) { console.log("Unsub AllUsers"); unsubscribeAllUsers(); unsubscribeAllUsers = null; }
-            if (unsubscribeRequests) { console.log("Unsub Requests"); unsubscribeRequests(); unsubscribeRequests = null; }
-            if (unsubscribeChats) { console.log("Unsub Chats"); unsubscribeChats(); unsubscribeChats = null; }
-            if (unsubscribeTickets) { console.log("Unsub Tickets"); unsubscribeTickets(); unsubscribeTickets = null; }
-            if (unsubscribeComments) { console.log("Unsub Comments"); unsubscribeComments(); unsubscribeComments = null; }
-            if (unsubscribeChatMessages) { console.log("Unsub ChatMessages"); unsubscribeChatMessages(); unsubscribeChatMessages = null; }
-            if (unsubscribeFollowing) { console.log("Unsub Following"); unsubscribeFollowing(); unsubscribeFollowing = null; }
-            if (unsubscribeFollowers) { console.log("Unsub Followers"); unsubscribeFollowers(); unsubscribeFollowers = null; }
-
-            // Clear page content only when actually navigating away, not just stopping listeners for a tab change etc.
-            // Let the render functions handle clearing their specific areas.
-             // pageContent.innerHTML = '';
-         }
-
-        // --- RENDER FUNCTIONS FOR EACH PAGE ---
-
+        // Render Auth Page
         function renderAuthPage() {
-            // Check if authContainer exists before setting innerHTML
-            if (!authContainer) return;
             authContainer.innerHTML = `
             <div class="relative w-full max-w-sm">
+                <!-- Language Selector -->
                 <div class="absolute top-0 right-0 p-2 z-10">
-                    <select id="lang-select-auth" class="bg-gray-700 text-white text-sm font-medium rounded p-1 border border-gray-600">
-                        <option value="en" ${currentLang === 'en' ? 'selected' : ''}>EN</option>
-                        <option value="yo" ${currentLang === 'yo' ? 'selected' : ''}>YO</option>
-                        <option value="fr" ${currentLang === 'fr' ? 'selected' : ''}>FR</option>
+                    <select id="lang-select-auth" class="bg-transparent text-white font-medium rounded">
+                        <option value="en" ${currentLang === 'en' ? 'selected' : ''}>English</option>
+                        <option value="yo" ${currentLang === 'yo' ? 'selected' : ''}>Yoruba</option>
+                        <option value="fr" ${currentLang === 'fr' ? 'selected' : ''}>Français</option>
                     </select>
                 </div>
-
-                <div class="bg-gray-800 p-8 pt-16 rounded-2xl shadow-xl relative border border-gray-700">
+                
+                <div class="bg-white p-8 pt-16 rounded-2xl shadow-xl relative">
                     <div class="text-center mb-6">
-                        <i class="ph-bold ph-planet text-5xl text-blue-500"></i>
-                        <h1 id="auth-title" class="text-2xl font-bold text-gray-100 mt-2" data-lang-key="${isSignupMode ? 'signup_title' : 'login_title'}"></h1>
-                        <p id="auth-subtitle" class="text-gray-400" data-lang-key="${isSignupMode ? 'signup_subtitle' : 'login_subtitle'}"></p>
+                        <i class="ph-bold ph-planet text-5xl text-blue-600"></i>
+                        <h1 id="auth-title" class="text-2xl font-bold text-slate-800" data-lang-key="${isSignupMode ? 'signup_title' : 'login_title'}"></h1>
+                        <p id="auth-subtitle" class="text-slate-500" data-lang-key="${isSignupMode ? 'signup_subtitle' : 'login_subtitle'}"></p>
                     </div>
-                    <form id="auth-form" class="space-y-4">
-                        ${isSignupMode ? `
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><input type="text" id="firstName" data-lang-key="placeholder_firstname" required></div>
-                            <div><input type="text" id="surname" data-lang-key="placeholder_surname" required></div>
-                        </div>
-                        <div><input type="text" id="username" data-lang-key="placeholder_username" required></div>
-                        <div><input type="date" id="dob" data-lang-key="placeholder_dob" placeholder="Date of Birth" required class="w-full appearance-none" max="${new Date().toISOString().split("T")[0]}"></div> {/* Added max date */}
-                        <div class="text-gray-400 text-sm"> {/* Added text-sm */}
-                            Gender:
-                            <label class="ml-4"><input type="radio" name="gender" value="male" class="mr-1" required> <span data-lang-key="gender_male">Male</span></label>
-                            <label class="ml-4"><input type="radio" name="gender" value="female" class="mr-1"> <span data-lang-key="gender_female">Female</span></label>
-                        </div>
-                        ` : ''}
-                        <div><input type="email" id="email" data-lang-key="placeholder_email" required></div>
-                        <div><input type="password" id="password" data-lang-key="placeholder_password" required></div>
-                        <p id="auth-error" class="error-text text-sm h-4"></p>
-                        <button id="auth-button" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg" data-lang-key="${isSignupMode ? 'btn_signup' : 'btn_login'}"></button>
-                    </form>
-                    ${!isSignupMode ? `
-                    <div class="text-center mt-3">
-                         <button id="forgot-password-link" type="button" class="link-style text-sm">Forgot Password?</button> {/* Ensure type="button" */}
+                    <div class="space-y-4">
+                        ${isSignupMode ? `<div><input type="text" id="username" data-lang-key="placeholder_username" class="w-full px-4 py-3 border border-slate-300 rounded-lg"></div>` : ''}
+                        <div><input type="email" id="email" data-lang-key="placeholder_email" class="w-full px-4 py-3 border border-slate-300 rounded-lg"></div>
+                        <div><input type="password" id="password" data-lang-key="placeholder_password" class="w-full px-4 py-3 border border-slate-300 rounded-lg"></div>
+                        <p id="auth-error" class="text-red-500 text-sm h-4"></p>
+                        <button id="auth-button" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg" data-lang-key="${isSignupMode ? 'btn_signup' : 'btn_login'}"></button>
+                        <p class="text-center text-sm text-slate-500 pt-2">
+                            <span data-lang-key="${isSignupMode ? 'toggle_login' : 'toggle_signup'}"></span> 
+                            <a href="#" id="auth-toggle-link" class="font-semibold text-blue-600 hover:underline">${isSignupMode ? 'Login' : 'Sign Up'}</a>
+                        </p>
                     </div>
-                    ` : ''}
-                    <p class="text-center text-sm text-gray-400 pt-4">
-                        <span data-lang-key="${isSignupMode ? 'toggle_login' : 'toggle_signup'}"></span>
-                        <a href="#" id="auth-toggle-link" class="font-semibold text-blue-500 hover:underline">${isSignupMode ? (translations[currentLang]?.btn_login || 'Login') : (translations[currentLang]?.btn_signup || 'Sign Up')}</a>
-                    </p>
                 </div>
             </div>`;
-            translatePage(); // Ensure elements are translated after render
-            // Add listeners AFTER innerHTML is set
-            const authForm = $('#auth-form'); if(authForm) authForm.addEventListener('submit', (e) => { e.preventDefault(); handleAuthAction(); });
-            const toggleLink = $('#auth-toggle-link'); if(toggleLink) toggleLink.addEventListener('click', (e) => { e.preventDefault(); toggleAuthMode(); });
-            const langSelect = $('#lang-select-auth'); if(langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
-            const forgotLink = $('#forgot-password-link'); if(forgotLink) forgotLink.addEventListener('click', (e) => { e.preventDefault(); showModal(forgotPasswordModal); });
+            translatePage();
+            // Add listeners for the newly created elements
+            $('#auth-button').addEventListener('click', handleAuthAction);
+            $('#auth-toggle-link').addEventListener('click', (e) => { e.preventDefault(); toggleAuthMode(); });
+            $('#lang-select-auth').addEventListener('change', (e) => setLanguage(e.target.value));
         }
 
-
+        // Render Feed Page
         function renderFeedPage() {
-            if (!pageContent) return;
             pageContent.innerHTML = `
                 <!-- Story Reel -->
-                <div class="story-reel mb-4 card !bg-transparent !border-0 !shadow-none px-4">
+                <div class="story-reel mb-4 bg-white p-3 rounded-lg shadow-sm">
                     <div class="story-item text-center">
-                        <div class="story-avatar !bg-gray-700 relative">
-                            <img src="${currentUserData?.profilePictureUrl || 'https://placehold.co/64x64/374151/71767B?text=?'}" alt="Add Story" class="!border-gray-900 current-user-profile-pic">
-                            <label for="story-upload-input" class="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center cursor-pointer text-lg leading-none">+</label>
+                        <div class="story-avatar !bg-gray-200 relative">
+                            <img src="${currentUserData?.profilePictureUrl}" alt="Your Story" class="!border-gray-200">
+                            <label for="story-upload-input" class="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center cursor-pointer text-lg">+</label>
                             <input type="file" id="story-upload-input" class="hidden" accept="image/*">
                         </div>
-                        <span class="text-xs font-medium mt-1 block" data-lang-key="story_you">Add Story</span>
+                        <span class="text-xs font-medium" data-lang-key="story_you">Your Story</span>
                     </div>
-                    <div id="stories-feed" class="flex gap-3">
-                         <p class="placeholder-text text-sm px-2" data-lang-key="loading">Loading...</p>
-                    </div>
+                    <div id="stories-feed" class="flex gap-3"></div>
                 </div>
                 <!-- Create Post -->
-                <div class="card p-4 mb-4 mx-4 sm:mx-0">
-                    <h2 class="text-lg font-bold mb-3" data-lang-key="create_post_title">Create a Post</h2>
-                    <textarea id="post-text" class="w-full p-2" rows="3" data-lang-key="placeholder_post"></textarea>
+                <div class="bg-white p-4 rounded-lg shadow-sm mb-4">
+                    <h2 class="text-xl font-bold text-slate-800 mb-3" data-lang-key="create_post_title">Create a Post</h2>
+                    <textarea id="post-text" class="w-full p-2 border border-slate-300 rounded-lg" rows="3" data-lang-key="placeholder_post"></textarea>
                     <div class="flex justify-between items-center mt-2">
                         <div>
-                            <label for="post-image-input" class="text-blue-500 hover:underline cursor-pointer text-sm" data-lang-key="btn_add_photo">Add Photo</label>
+                            <label for="post-image-input" class="file-input-label text-blue-500 hover:underline cursor-pointer" data-lang-key="btn_add_photo">Add Photo</label>
                             <input type="file" id="post-image-input" class="hidden" accept="image/*">
-                            <span id="image-name" class="text-sm text-gray-400 ml-2"></span>
+                            <span id="image-name" class="text-sm text-slate-500 ml-2"></span>
                         </div>
-                        <button id="submit-post-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg text-sm" data-lang-key="btn_post">Post</button>
+                        <button id="submit-post-btn" class="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg" data-lang-key="btn_post">Post</button>
                     </div>
                 </div>
                 <!-- Post Feed -->
-                <div id="post-feed" class="space-y-4 mx-4 sm:mx-0">
-                    <p class="placeholder-text text-center p-4" data-lang-key="loading">Loading posts...</p>
-                </div>
+                <div id="post-feed" class="space-y-4"></div>
             `;
-            // Add listeners
-            const storyInput = $('#story-upload-input'); if (storyInput) storyInput.addEventListener('change', handleStoryUpload);
-            const submitPostBtn = $('#submit-post-btn'); if (submitPostBtn) submitPostBtn.addEventListener('click', handleSubmitPost);
-            const postImageInput = $('#post-image-input');
-            const imageNameSpan = $('#image-name');
-            if (postImageInput) postImageInput.addEventListener('change', () => {
-                if(postImageInput.files.length > 0 && imageNameSpan) imageNameSpan.textContent = postImageInput.files[0].name;
-                else if(imageNameSpan) imageNameSpan.textContent = '';
+            // Add listeners for this page
+            $('#story-upload-input').addEventListener('change', handleStoryUpload);
+            $('#submit-post-btn').addEventListener('click', handleSubmitPost);
+            $('#post-image-input').addEventListener('change', () => {
+                if($('#post-image-input').files.length > 0) $('#image-name').textContent = $('#post-image-input').files[0].name;
             });
             listenToStories();
             listenToPosts();
         }
 
+        // Render Friends Page
         function renderFriendsPage() {
-            if (!pageContent) return;
             pageContent.innerHTML = `
-                <h1 class="text-2xl font-bold mb-4 px-4 sm:px-0" data-lang-key="friends_title">People</h1>
-                <div class="mb-6 px-4 sm:px-0">
-                     <input type="search" id="search-users-input" data-lang-key="placeholder_search" placeholder="Search My Space..." class="w-full">
-                     <div id="search-results" class="mt-2 space-y-2"></div>
+                <h1 class="text-2xl font-bold mb-4" data-lang-key="friends_title">Find Friends</h1>
+                <!-- Friend Requests -->
+                <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+                    <h2 class="text-lg font-semibold mb-3" data-lang-key="friends_requests">Friend Requests</h2>
+                    <div id="friend-requests-list" class="space-y-2">
+                        <p class="text-gray-500">No new requests.</p>
+                    </div>
                 </div>
-
-                <div class="mb-4 border-b border-gray-700 px-4 sm:px-0">
-                    <nav class="-mb-px flex space-x-6 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
-                        <button class="tab-button active whitespace-nowrap" data-tab="friend-requests">Requests</button>
-                        <button class="tab-button whitespace-nowrap" data-tab="my-friends">Friends</button>
-                        <button class="tab-button whitespace-nowrap" data-tab="following">Following</button>
-                        <button class="tab-button whitespace-nowrap" data-tab="followers">Followers</button>
-                    </nav>
+                <!-- My Friends -->
+                <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+                    <h2 class="text-lg font-semibold mb-3" data-lang-key="friends_my">My Friends</h2>
+                    <div id="my-friends-list" class="space-y-2">
+                        <p class="text-gray-500">You haven't added any friends yet.</p>
+                    </div>
                 </div>
-
-                 <div id="friends-tab-content">
-                     {/* Friend Requests (Initial Tab) */}
-                     <div id="friend-requests-tab" class="tab-content active px-4 sm:px-0">
-                         <div id="friend-requests-list" class="space-y-0 card overflow-hidden"> {/* Remove space, add overflow */}
-                             {/* Content added by listener */}
-                         </div>
-                     </div>
-                     {/* My Friends Tab */}
-                     <div id="my-friends-tab" class="tab-content hidden px-4 sm:px-0">
-                         <div id="my-friends-list" class="space-y-0 card overflow-hidden">
-                              {/* Content added by listener */}
-                         </div>
-                     </div>
-                      {/* Following Tab */}
-                     <div id="following-tab" class="tab-content hidden px-4 sm:px-0">
-                         <div id="following-list" class="space-y-0 card overflow-hidden">
-                             {/* Content added by listener */}
-                         </div>
-                     </div>
-                      {/* Followers Tab */}
-                     <div id="followers-tab" class="tab-content hidden px-4 sm:px-0">
-                         <div id="followers-list" class="space-y-0 card overflow-hidden">
-                             {/* Content added by listener */}
-                         </div>
-                     </div>
-                 </div>
-
-                <style>
-                    .tab-button { border-bottom: 2px solid transparent; padding: 8px 4px; font-size: 14px; font-weight: 500; color: var(--text-secondary); background: none; margin-bottom: -1px; } /* Adjust margin */}
-                    .tab-button.active { border-bottom-color: var(--accent-blue); color: var(--accent-blue); font-weight: 600; }
-                    .tab-content.hidden { display: none; }
-                    /* Style for user list items */
-                    .user-list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
-                    .user-list-item:last-child { border-bottom: none; }
-                </style>
+                <!-- All Users -->
+                <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+                    <h2 class="text-lg font-semibold mb-3">All Users on My Space</h2>
+                    <div id="all-users-list" class="space-y-2"></div>
+                </div>
             `;
-            // Add listeners
-             const searchInput = $('#search-users-input');
-             if(searchInput) searchInput.addEventListener('input', (e) => {
-                 clearTimeout(searchTimeout);
-                 searchTimeout = setTimeout(() => handleSearchUsers(e.target.value), 300);
-             });
-
-             const tabButtons = $$('.tab-button');
-             tabButtons.forEach(button => {
-                 button.addEventListener('click', (e) => {
-                     const clickedButton = e.target.closest('.tab-button');
-                     if (!clickedButton) return;
-
-                     tabButtons.forEach(btn => btn.classList.remove('active'));
-                     clickedButton.classList.add('active');
-                     $$('.tab-content').forEach(content => content.classList.add('hidden'));
-                     const tabId = clickedButton.dataset.tab;
-                     const activeContent = $(`#${tabId}-tab`);
-                     if(activeContent) activeContent.classList.remove('hidden');
-                     else { console.error("Tab content not found for:", tabId); }
-
-                     // Stop old listeners and load data for the new tab
-                     stopAllPageListeners(true);
-                     if(tabId === 'friend-requests') listenToFriendRequests();
-                     else if(tabId === 'my-friends') listenToMyFriends();
-                     else if(tabId === 'following') listenToFollowing();
-                     else if(tabId === 'followers') listenToFollowers();
-                 });
-             });
-
-             // Initial data load
-             listenToFriendRequests();
-         }
-
-        function renderMessagesPage() {
-            if (!pageContent) return;
-             pageContent.innerHTML = `
-                 <h1 class="text-2xl font-bold mb-4 px-4 sm:px-0" data-lang-key="nav_messages">Messages</h1>
-                 <div id="chat-list" class="space-y-2 px-4 sm:px-0">
-                     <p class="placeholder-text" data-lang-key="loading">Loading chats...</p>
-                 </div>
-             `;
-             listenToFriendsForChat();
+            listenToAllUsers();
+            listenToFriendRequests();
+            listenToMyFriends();
         }
 
-        function renderProfilePage() {
-             if (!pageContent || !currentUserData) {
-                 if (pageContent) pageContent.innerHTML = `<p class="placeholder-text p-4" data-lang-key="loading">Loading profile...</p>`;
-                 if (pageContent) translatePage();
-                 return;
-             }
+        // Render Messages Page
+        function renderMessagesPage() {
             pageContent.innerHTML = `
-                <div class="relative card !rounded-none sm:!rounded-lg !border-x-0 !border-t-0 sm:!border mb-6">
-                    <div class="absolute top-4 left-4">
-                        <button id="settings-btn" data-action="go-to-settings" class="text-gray-400 hover:text-white p-2 rounded-full hover:bg-gray-700 bg-opacity-50"> <i class="ph ph-gear text-2xl"></i> </button>
+                <h1 class="text-2xl font-bold mb-4" data-lang-key="nav_messages">Messages</h1>
+                <div id="chat-list" class="space-y-2">
+                    <p class="text-gray-500">Start a conversation from your friends list.</p>
+                </div>
+            `;
+            listenToFriendsForChat();
+        }
+        
+        // Render Profile Page
+        function renderProfilePage() {
+            pageContent.innerHTML = `
+                <div class="relative">
+                    <button id="logout-btn" class="absolute top-0 right-0 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg" data-lang-key="btn_logout">Logout</button>
+                </div>
+                <div class="text-center mb-6 pt-8">
+                    <div class="relative w-32 h-32 mx-auto">
+                        <img id="profile-page-pic" src="${currentUserData?.profilePictureUrl}" class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg">
+                        <label for="profile-pic-input" class="absolute bottom-1 right-1 bg-blue-600 text-white rounded-full p-2 cursor-pointer border-2 border-white">
+                            <i class="ph-bold ph-pencil-simple"></i>
+                        </label>
+                        <input type="file" id="profile-pic-input" class="hidden" accept="image/*">
                     </div>
-                    <div class="absolute top-4 right-4">
-                         <button id="logout-btn" class="text-sm bg-gray-700 hover:bg-gray-600 bg-opacity-50 text-gray-100 font-semibold py-2 px-4 rounded-full" data-lang-key="btn_logout">Logout</button>
+                    <h1 id="profile-page-name" class="text-3xl font-bold mt-4">${currentUserData?.username}</h1>
+                </div>
+                
+                <!-- Language & Support Section -->
+                <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+                    <!-- Language Selector -->
+                    <div class="flex justify-between items-center mb-4">
+                         <label for="lang-select-profile" class="font-medium">Language</label>
+                         <select id="lang-select-profile" class="border border-gray-300 rounded-lg p-2">
+                            <option value="en" ${currentLang === 'en' ? 'selected' : ''}>English</option>
+                            <option value="yo" ${currentLang === 'yo' ? 'selected' : ''}>Yoruba</option>
+                            <option value="fr" ${currentLang === 'fr' ? 'selected' : ''}>Français</option>
+                         </select>
                     </div>
-
-                    <div class="text-center pt-20 pb-6">
-                         <div class="relative w-32 h-32 mx-auto">
-                             <img id="profile-page-pic" src="${currentUserData.profilePictureUrl}" class="w-32 h-32 rounded-full object-cover border-4 border-black shadow-lg current-user-profile-pic">
-                             <label for="profile-pic-input" class="absolute bottom-1 right-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 cursor-pointer border-2 border-black">
-                                 <i class="ph-bold ph-pencil-simple"></i>
-                             </label>
-                             <input type="file" id="profile-pic-input" class="hidden" accept="image/*">
-                         </div>
-                         <h1 id="profile-page-name" class="text-2xl font-bold mt-4 flex items-center justify-center current-user-username">
-                              ${currentUserData.username}
-                              ${renderVerifiedBadge(currentUserData)}
-                         </h1>
-                         <p class="text-gray-400 text-sm mt-1">@${currentUserData.username}</p>
-                         <div class="flex justify-center space-x-4 mt-4 text-sm">
-                              <span class="cursor-pointer hover:underline"><span class="font-bold">${currentUserData.following?.length || 0}</span> <span data-lang-key="friends_following">Following</span></span>
-                              <span class="cursor-pointer hover:underline"><span class="font-bold">${currentUserData.followers?.length || 0}</span> <span data-lang-key="friends_followers">Followers</span></span>
-                         </div>
+                    <!-- Help & Support -->
+                    <button id="help-support-btn" class="w-full text-left p-2 rounded-lg hover:bg-gray-100 font-medium flex justify-between items-center" data-lang-key="profile_help">
+                        <span>Help & Support</span>
+                        <i class="ph ph-caret-down"></i>
+                    </button>
+                    <div id="help-support-section" class="hidden mt-4 pt-4 border-t">
+                        <h3 class="text-lg font-semibold mb-3" data-lang-key="help_submit_ticket">Submit a Ticket</h3>
+                        <textarea id="support-ticket-input" class="w-full p-2 border border-gray-300 rounded-lg" rows="3" data-lang-key="placeholder_complaint"></textarea>
+                        <button id="submit-ticket-btn" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg mt-2" data-lang-key="btn_submit">Submit</button>
+                        
+                        <h3 class="text-lg font-semibold mt-6 mb-3" data-lang-key="help_my_tickets">My Tickets</h3>
+                        <div id="my-tickets-list" class="space-y-2"></div>
                     </div>
                 </div>
 
-                <h2 class="text-xl font-semibold mb-2 px-4 sm:px-0" data-lang-key="profile_photos">Media</h2>
-                <div id="profile-photos" class="grid grid-cols-3 gap-1 p-1">
-                     <p class="placeholder-text col-span-3 text-center py-4" data-lang-key="loading">Loading photos...</p>
+                <h2 class="text-xl font-semibold mb-2" data-lang-key="profile_photos">My Photos</h2>
+                <div id="profile-photos" class="grid grid-cols-3 gap-1 bg-white p-1 rounded-lg shadow-sm">
+                    <!-- User's photo posts will be loaded here -->
                 </div>
             `;
             // Add listeners
-            const logoutBtn = $('#logout-btn'); if(logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
-            const profilePicInput = $('#profile-pic-input'); if(profilePicInput) profilePicInput.addEventListener('change', handleProfilePicUpload);
-            const settingsBtn = $('#settings-btn'); if(settingsBtn) settingsBtn.addEventListener('click', () => showPage('settings'));
+            $('#logout-btn').addEventListener('click', () => signOut(auth));
+            $('#profile-pic-input').addEventListener('change', handleProfilePicUpload);
+            $('#lang-select-profile').addEventListener('change', (e) => setLanguage(e.target.value));
+            $('#help-support-btn').addEventListener('click', () => {
+                $('#help-support-section').classList.toggle('hidden');
+                if(!$('#help-support-section').classList.contains('hidden')) {
+                    listenToMySupportTickets();
+                } else {
+                    if(unsubscribeTickets) unsubscribeTickets();
+                }
+            });
+            $('#submit-ticket-btn').addEventListener('click', handleSubmitSupportTicket);
             listenToMyPhotos();
         }
 
-        function renderSettingsPage() {
-             if (!pageContent) return;
-             pageContent.innerHTML = `
-                 <div id="settings-page-content"> {/* Added ID */}
-                     <div class="flex items-center mb-6 px-4 sm:px-0">
-                          <button data-action="back-to-profile" class="text-gray-400 mr-4 p-2 rounded-full hover:bg-gray-700"><i class="ph ph-arrow-left text-2xl"></i></button>
-                          <h1 class="text-2xl font-bold" data-lang-key="settings_title">Settings</h1>
-                     </div>
+        // --- DATA LISTENERS ---
+        function listenToUserData() {
+            if (unsubscribeUser) unsubscribeUser();
+            const userDocRef = doc(db, 'users', currentUserId);
+            unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+                if (doc.exists()) {
+                    currentUserData = { id: doc.id, ...doc.data() };
+                    // Set language from their saved preference
+                    if (currentUserData.preferredLanguage && currentUserData.preferredLanguage !== currentLang) {
+                        setLanguage(currentUserData.preferredLanguage);
+                    }
+                    // Update any visible profile info
+                    const profilePic = $('#profile-page-pic');
+                    if (profilePic) profilePic.src = currentUserData.profilePictureUrl;
+                    const profileName = $('#profile-page-name');
+                    if (profileName) profileName.textContent = currentUserData.username;
+                }
+            });
+        };
 
-                     <div class="card p-4 mb-6 mx-4 sm:mx-0">
-                         <h2 class="text-lg font-semibold mb-4" data-lang-key="settings_account">Account</h2>
-                         {/* Email Verification */}
-                         <div class="mb-4" id="email-verification-section">
-                             <p class="text-gray-400 text-sm mb-1">Email: ${auth.currentUser?.email}</p>
-                             {/* Content updated by updateVerificationStatusUI */}
-                         </div>
-                          {/* Language Selector */}
-                          <div class="flex justify-between items-center">
-                               <label for="lang-select-settings" class="font-medium" data-lang-key="settings_language">Language</label>
-                               <select id="lang-select-settings" class="border border-gray-600 rounded-lg p-2 bg-gray-900 text-gray-100 text-sm w-1/2">
-                                  <option value="en" ${currentLang === 'en' ? 'selected' : ''}>English</option>
-                                  <option value="yo" ${currentLang === 'yo' ? 'selected' : ''}>Yoruba</option>
-                                  <option value="fr" ${currentLang === 'fr' ? 'selected' : ''}>Français</option>
-                               </select>
-                          </div>
-                     </div>
-
-                      <div class="card p-4 mb-6 mx-4 sm:mx-0">
-                          <h2 class="text-lg font-semibold mb-3" data-lang-key="profile_help">Help & Support</h2>
-                          <div id="help-support-section">
-                              <h3 class="text-md font-semibold mb-3" data-lang-key="help_submit_ticket">Submit a Ticket</h3>
-                              <textarea id="support-ticket-input" class="w-full p-2" rows="3" data-lang-key="placeholder_complaint"></textarea>
-                              <button id="submit-ticket-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg mt-2" data-lang-key="btn_submit">Submit</button>
-
-                              <h3 class="text-md font-semibold mt-6 mb-3" data-lang-key="help_my_tickets">My Tickets</h3>
-                              <div id="my-tickets-list" class="space-y-3">
-                                   <p class="placeholder-text" data-lang-key="loading">Loading tickets...</p>
-                              </div>
-                          </div>
-                      </div>
-                 </div>
-             `;
-             // Add listeners
-             const backBtn = $('button[data-action="back-to-profile"]'); if(backBtn) backBtn.addEventListener('click', () => showPage('profile'));
-             const langSelect = $('#lang-select-settings'); if (langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
-             updateVerificationStatusUI(auth.currentUser?.emailVerified); // Initial render
-             const submitTicketBtn = $('#submit-ticket-btn'); if (submitTicketBtn) submitTicketBtn.addEventListener('click', handleSubmitSupportTicket);
-             listenToMySupportTickets();
+        function listenToStories() {
+            if (unsubscribeStories) unsubscribeStories();
+            const storiesFeed = $('#stories-feed');
+            if(!storiesFeed) return;
+            
+            const twentyFourHoursAgo = Timestamp.fromDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
+            const q = query(collection(db, 'stories'), where('createdAt', '>', twentyFourHoursAgo), orderBy('createdAt', 'desc'));
+            
+            unsubscribeStories = onSnapshot(q, (snapshot) => {
+                storiesFeed.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const story = doc.data();
+                    if(story.authorId === currentUserId) return; // Don't show my own story in feed
+                    const storyEl = document.createElement('div');
+                    storyEl.className = 'story-item text-center';
+                    storyEl.innerHTML = `
+                        <div class="story-avatar">
+                            <img src="${story.authorProfilePic}" alt="${story.authorUsername}'s Story">
+                        </div>
+                        <span class="text-xs font-medium">${story.authorUsername}</span>
+                    `;
+                    storyEl.addEventListener('click', () => viewStory(story));
+                    storiesFeed.appendChild(storyEl);
+                });
+            });
         }
 
-        // --- (updateVerificationStatusUI function remains the same) ---
-        function updateVerificationStatusUI(isVerified) { /* ... same ... */ }
+        function listenToPosts() {
+            if (unsubscribePosts) unsubscribePosts();
+            const postFeed = $('#post-feed');
+            if(!postFeed) return;
 
+            const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+            unsubscribePosts = onSnapshot(q, (snapshot) => {
+                postFeed.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const post = { id: doc.id, ...doc.data() };
+                    const postEl = document.createElement('div');
+                    postEl.className = 'bg-white rounded-lg shadow-sm';
+                    
+                    const userHasLiked = post.likes && post.likes.includes(currentUserId);
+                    
+                    postEl.innerHTML = `
+                        <div class="flex items-center p-4">
+                            <img src="${post.authorProfilePic}" class="w-10 h-10 rounded-full mr-3 object-cover">
+                            <div>
+                                <p class="font-bold">${post.authorUsername}</p>
+                                <p class="text-xs text-slate-500">${post.createdAt?.toDate().toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <p class="px-4 mb-3 whitespace-pre-wrap">${post.text}</p>
+                        ${post.imageUrl ? `<img src="${post.imageUrl}" class="w-full max-h-[500px] object-cover">` : ''}
+                        <div class="flex justify-between items-center p-4">
+                            <button data-action="like" data-id="${post.id}" class="flex items-center space-x-1 ${userHasLiked ? 'text-red-500' : 'text-gray-500'}">
+                                <i class="${userHasLiked ? 'ph-fill' : 'ph'} ph-heart text-2xl"></i>
+                                <span class="text-sm">${post.likes?.length || 0}</span>
+                            </button>
+                            <button data-action="comment" data-id="${post.id}" class="flex items-center space-x-1 text-gray-500">
+                                <i class="ph ph-chat-circle text-2xl"></i>
+                                <span class="text-sm">${post.commentCount || 0}</span>
+                            </button>
+                        </div>
+                    `;
+                    postFeed.appendChild(postEl);
+                });
+            });
+        }
+        
+        function listenToAllUsers() {
+            if(unsubscribeAllUsers) unsubscribeAllUsers();
+            const allUsersList = $('#all-users-list');
+            if(!allUsersList) return;
+            
+            const q = query(collection(db, 'users'));
+            unsubscribeAllUsers = onSnapshot(q, (snapshot) => {
+                allUsersList.innerHTML = '';
+                snapshot.forEach(doc => {
+                    if (doc.id === currentUserId) return; // Don't show myself
+                    const user = { id: doc.id, ...doc.data() };
+                    
+                    let btn = `<button data-action="add-friend" data-id="${user.id}" class="bg-blue-500 text-white text-sm py-1 px-3 rounded-full" data-lang-key="btn_add_friend">Add</button>`;
+                    if(currentUserData.friends?.includes(user.id)) {
+                        btn = `<button class="text-green-600 text-sm font-semibold" data-lang-key="btn_friends" disabled>Friends</button>`;
+                    } else if(currentUserData.friendRequests?.includes(user.id)) {
+                        btn = `<button class="text-gray-500 text-sm" data-lang-key="btn_pending" disabled>Pending</button>`;
+                    } else if(user.friendRequests?.includes(currentUserId)) {
+                         btn = `<button class="text-gray-500 text-sm" data-lang-key="btn_pending" disabled>Pending</button>`;
+                    }
 
-        // --- DATA LISTENERS ---
-        // (Full implementations of all listeners: UserData, Stories, Posts, AllUsers/Search, Requests, Friends, Following, Followers, ChatList, Photos, Tickets)
-        // ... Make sure placeholders and empty states are handled and translated ...
+                    const userEl = document.createElement('div');
+                    userEl.className = 'flex items-center justify-between p-2';
+                    userEl.innerHTML = `
+                        <div class="flex items-center">
+                            <img src="${user.profilePictureUrl}" class="w-10 h-10 rounded-full mr-3 object-cover">
+                            <p class="font-medium">${user.username}</p>
+                        </div>
+                        ${btn}
+                    `;
+                    allUsersList.appendChild(userEl);
+                });
+                translatePage();
+            });
+        }
+        
+        function listenToFriendRequests() {
+            if(unsubscribeRequests) unsubscribeRequests();
+            const friendRequestsList = $('#friend-requests-list');
+            if(!friendRequestsList || !currentUserData.friendRequests || currentUserData.friendRequests.length === 0) {
+                if(friendRequestsList) friendRequestsList.innerHTML = `<p class="text-gray-500 text-sm">No new requests.</p>`;
+                return;
+            }
+            
+            const q = query(collection(db, 'users'), where('__name__', 'in', currentUserData.friendRequests));
+            unsubscribeRequests = onSnapshot(q, (snapshot) => {
+                friendRequestsList.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const user = { id: doc.id, ...doc.data() };
+                    const userEl = document.createElement('div');
+                    userEl.className = 'flex items-center justify-between p-2';
+                    userEl.innerHTML = `
+                        <div class="flex items-center">
+                            <img src="${user.profilePictureUrl}" class="w-10 h-10 rounded-full mr-3 object-cover">
+                            <p class="font-medium">${user.username}</p>
+                        </div>
+                        <button data-action="accept-friend" data-id="${user.id}" class="bg-green-500 text-white text-sm py-1 px-3 rounded-full" data-lang-key="btn_accept">Accept</button>
+                    `;
+                    friendRequestsList.appendChild(userEl);
+                });
+                translatePage();
+            });
+        }
+        
+        function listenToMyFriends() {
+            if(unsubscribeChats) unsubscribeChats(); // Re-use this listener name
+            const myFriendsList = $('#my-friends-list');
+            if(!myFriendsList || !currentUserData.friends || currentUserData.friends.length === 0) {
+                 if(myFriendsList) myFriendsList.innerHTML = `<p class="text-gray-500 text-sm">You haven't added any friends yet.</p>`;
+                return;
+            }
+            
+            const q = query(collection(db, 'users'), where('__name__', 'in', currentUserData.friends));
+            unsubscribeChats = onSnapshot(q, (snapshot) => {
+                myFriendsList.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const user = { id: doc.id, ...doc.data() };
+                    const friendEl = document.createElement('div');
+                    friendEl.className = 'flex items-center p-2';
+                    friendEl.innerHTML = `
+                        <img src="${user.profilePictureUrl}" class="w-10 h-10 rounded-full mr-3 object-cover">
+                        <p class="font-medium">${user.username}</p>
+                    `;
+                    myFriendsList.appendChild(friendEl);
+                });
+            });
+        }
+        
+        function listenToFriendsForChat() {
+            // This is the same as listenToMyFriends, but renders for chat
+            if(unsubscribeChats) unsubscribeChats();
+            const chatList = $('#chat-list');
+            if(!chatList || !currentUserData.friends || currentUserData.friends.length === 0) {
+                 if(chatList) chatList.innerHTML = `<p class="text-gray-500">Add friends to start chatting.</p>`;
+                return;
+            }
+            
+            const q = query(collection(db, 'users'), where('__name__', 'in', currentUserData.friends));
+            unsubscribeChats = onSnapshot(q, (snapshot) => {
+                chatList.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const user = { id: doc.id, ...doc.data() };
+                    const chatEl = document.createElement('div');
+                    chatEl.className = 'flex items-center p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50';
+                    chatEl.innerHTML = `
+                        <img src="${user.profilePictureUrl}" class="w-12 h-12 rounded-full mr-3 object-cover">
+                        <p class="font-medium text-lg">${user.username}</p>
+                    `;
+                    chatEl.addEventListener('click', () => openChat(user.id, user.username));
+                    chatList.appendChild(chatEl);
+                });
+            });
+        }
+        
+        function listenToMyPhotos() {
+            // Re-using unsubscribePosts is fine as it's on a different page
+            if (unsubscribePosts) unsubscribePosts();
+            const profilePhotos = $('#profile-photos');
+            if(!profilePhotos) return;
+
+            const q = query(collection(db, 'posts'), where('authorId', '==', currentUserId), where('imageUrl', '!=', null), orderBy('imageUrl'), orderBy('createdAt', 'desc'));
+            unsubscribePosts = onSnapshot(q, (snapshot) => {
+                profilePhotos.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const post = doc.data();
+                    const photoEl = document.createElement('div');
+                    photoEl.className = 'w-full aspect-square bg-gray-200 rounded';
+                    photoEl.innerHTML = `<img src="${post.imageUrl}" class="w-full h-full object-cover rounded">`;
+                    profilePhotos.appendChild(photoEl);
+                });
+            });
+        }
+        
+        function listenToMySupportTickets() {
+            if(unsubscribeTickets) unsubscribeTickets();
+            const ticketsList = $('#my-tickets-list');
+            if(!ticketsList) return;
+            
+            const q = query(collection(db, 'support_tickets'), where('userId', '==', currentUserId), orderBy('createdAt', 'desc'));
+            unsubscribeTickets = onSnapshot(q, (snapshot) => {
+                ticketsList.innerHTML = '';
+                if(snapshot.empty) {
+                    ticketsList.innerHTML = '<p class="text-gray-500 text-sm">No tickets submitted.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const ticket = doc.data();
+                    const ticketEl = document.createElement('div');
+                    ticketEl.className = 'p-3 bg-gray-100 rounded-lg';
+                    ticketEl.innerHTML = `
+                        <p class="text-sm text-gray-500">${ticket.createdAt.toDate().toLocaleDateString()}</p>
+                        <p class="font-medium">${ticket.message}</p>
+                        <p class="text-sm font-semibold mt-2 ${ticket.status === 'resolved' ? 'text-green-600' : 'text-yellow-600'}">
+                            Status: <span data-lang-key="ticket_status_${ticket.status}">${ticket.status}</span>
+                        </p>
+                        ${ticket.adminReply ? `
+                            <div class="mt-2 pt-2 border-t border-gray-300">
+                                <p class="font-bold text-sm" data-lang-key="ticket_admin_reply">Admin Reply:</p>
+                                <p class="text-sm">${ticket.adminReply}</p>
+                            </div>
+                        ` : ''}
+                    `;
+                    ticketsList.appendChild(ticketEl);
+                });
+                translatePage();
+            });
+        }
 
         // --- CORE ACTION HANDLERS ---
-        // (Full implementations of all handlers: StoryUpload, viewStory, SubmitPost, Like, Comments, ProfilePicUpload, Friend Requests, Follow/Unfollow, Support Ticket, Chat, Verify Email, Edit/Delete Post, Forgot Password, SearchUsers)
-        // ... Ensure loaders are shown/hidden appropriately ...
-        // ... Ensure errors are caught and shown to user via showAlert ...
+        const handleStoryUpload = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            showLoader();
+            try {
+                const imageUrl = await uploadImageToCloudinary(file);
+                await addDoc(collection(db, 'stories'), {
+                    imageUrl: imageUrl,
+                    authorId: currentUserId,
+                    authorUsername: currentUserData.username,
+                    authorProfilePic: currentUserData.profilePictureUrl,
+                    createdAt: serverTimestamp()
+                });
+                showAlert("Story posted!");
+            } catch (error) {
+                console.error(error);
+                showAlert("Could not post story.");
+            } finally {
+                hideLoader();
+            }
+        };
 
-        // --- GLOBAL EVENT LISTENERS ---
+        const viewStory = (story) => {
+            $('#story-image').src = story.imageUrl;
+            showModal(storyViewerModal);
+            // Simple timeout to close modal
+            setTimeout(() => {
+                hideModal(storyViewerModal);
+            }, 5000); // Show story for 5 seconds
+        };
+        
+        const handleSubmitPost = async () => {
+            const text = $('#post-text').value.trim();
+            const file = $('#post-image-input').files[0];
+            if (!text && !file) return;
+            showLoader();
+            try {
+                let imageUrl = null;
+                if (file) {
+                    imageUrl = await uploadImageToCloudinary(file);
+                }
+                await addDoc(collection(db, 'posts'), {
+                    text: text,
+                    imageUrl: imageUrl,
+                    authorId: currentUserId,
+                    authorUsername: currentUserData.username,
+                    authorProfilePic: currentUserData.profilePictureUrl,
+                    createdAt: serverTimestamp(),
+                    likes: [],
+                    commentCount: 0
+                });
+                $('#post-text').value = '';
+                $('#post-image-input').value = '';
+                $('#image-name').textContent = '';
+            } catch (error) {
+                console.error(error);
+                showAlert('Could not create post.');
+            } finally {
+                hideLoader();
+            }
+        };
+        
+        const handleLikePost = async (postId) => {
+            const postRef = doc(db, 'posts', postId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const postDoc = await transaction.get(postRef);
+                    if (!postDoc.exists()) throw "Document does not exist!";
+                    
+                    const postData = postDoc.data();
+                    const likes = postData.likes || [];
+                    let newLikes;
+                    if (likes.includes(currentUserId)) {
+                        newLikes = likes.filter(id => id !== currentUserId);
+                    } else {
+                        newLikes = [...likes, currentUserId];
+                    }
+                    transaction.update(postRef, { likes: newLikes });
+                });
+            } catch (e) {
+                console.error("Like transaction failed: ", e);
+            }
+        };
+
+        const handleOpenComments = (postId) => {
+            currentOpenPostId = postId;
+            showModal(commentModal);
+            const commentList = $('#comment-list');
+            commentList.innerHTML = '<p>Loading...</p>';
+            
+            if(unsubscribeComments) unsubscribeComments();
+            const q = query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc'));
+            unsubscribeComments = onSnapshot(q, (snapshot) => {
+                commentList.innerHTML = '';
+                if(snapshot.empty) {
+                    commentList.innerHTML = '<p class="text-gray-500 text-sm">No comments yet.</p>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const comment = doc.data();
+                    const commentEl = document.createElement('div');
+                    commentEl.className = 'p-2 bg-gray-100 rounded-lg';
+                    commentEl.innerHTML = `
+                        <div class="flex items-center space-x-2">
+                            <img src="${comment.authorProfilePic}" class="w-6 h-6 rounded-full object-cover">
+                            <span class="font-semibold text-sm">${comment.authorUsername}</span>
+                        </div>
+                        <p class="pl-8 text-sm">${comment.text}</p>
+                    `;
+                    commentList.appendChild(commentEl);
+                });
+            });
+        };
+        
+        const handleSubmitComment = async () => {
+            const text = $('#comment-input').value.trim();
+            if(!text || !currentOpenPostId) return;
+            
+            try {
+                // Add the comment
+                const commentRef = await addDoc(collection(db, 'posts', currentOpenPostId, 'comments'), {
+                    text: text,
+                    authorId: currentUserId,
+                    authorUsername: currentUserData.username,
+                    authorProfilePic: currentUserData.profilePictureUrl,
+                    createdAt: serverTimestamp()
+                });
+                
+                // Update the comment count on the post
+                const postRef = doc(db, 'posts', currentOpenPostId);
+                await runTransaction(db, async (transaction) => {
+                    const postDoc = await transaction.get(postRef);
+                    const currentCount = postDoc.data().commentCount || 0;
+                    transaction.update(postRef, { commentCount: currentCount + 1 });
+                });
+                
+                $('#comment-input').value = '';
+                // Don't hide modal, let user see their comment appear
+            } catch(e) {
+                console.error("Error adding comment: ", e);
+                showAlert("Could not post comment.");
+            }
+        };
+        
+        const handleProfilePicUpload = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            showLoader();
+            try {
+                const imageUrl = await uploadImageToCloudinary(file);
+                const userDocRef = doc(db, 'users', currentUserId);
+                await updateDoc(userDocRef, { profilePictureUrl: imageUrl });
+                showAlert('Profile picture updated!');
+            } catch (error) {
+                showAlert('Upload failed. Please try again.');
+            } finally {
+                hideLoader();
+            }
+        };
+        
+        const handleSendFriendRequest = async (targetUserId) => {
+            try {
+                const targetUserRef = doc(db, 'users', targetUserId);
+                await updateDoc(targetUserRef, {
+                    friendRequests: arrayUnion(currentUserId)
+                });
+                // Update button state (optimistic update)
+                const btn = $(`[data-id="${targetUserId}"][data-action="add-friend"]`);
+                if(btn) {
+                    btn.textContent = 'Pending';
+                    btn.disabled = true;
+                    btn.classList.remove('bg-blue-500', 'text-white');
+                    btn.classList.add('text-gray-500');
+                }
+            } catch(e) {
+                console.error(e);
+                showAlert("Could not send friend request.");
+            }
+        };
+        
+        const handleAcceptFriendRequest = async (requestingUserId) => {
+            try {
+                const batch = writeBatch(db);
+                
+                // Add to my friends list and remove from my requests
+                const myRef = doc(db, 'users', currentUserId);
+                batch.update(myRef, {
+                    friends: arrayUnion(requestingUserId),
+                    friendRequests: arrayRemove(requestingUserId)
+                });
+                
+                // Add me to their friends list
+                const theirRef = doc(db, 'users', requestingUserId);
+                batch.update(theirRef, {
+                    friends: arrayUnion(currentUserId)
+                });
+                
+                await batch.commit();
+            } catch(e) {
+                console.error(e);
+                showAlert("Could not accept friend request.");
+            }
+        };
+        
+        const handleSubmitSupportTicket = async () => {
+            const message = $('#support-ticket-input').value.trim();
+            if(!message) return;
+            
+            try {
+                await addDoc(collection(db, 'support_tickets'), {
+                    userId: currentUserId,
+                    userEmail: currentUserData.email,
+                    message: message,
+                    status: 'open',
+                    adminReply: '',
+                    createdAt: serverTimestamp()
+                });
+                $('#support-ticket-input').value = '';
+                showAlert("Support ticket submitted.");
+            } catch(e) {
+                console.error(e);
+                showAlert("Could not submit ticket.");
+            }
+        };
+        
+        const openChat = (friendId, friendName) => {
+            currentOpenChatId = [currentUserId, friendId].sort().join('_');
+            $('#chat-with-name').textContent = `Chat with ${friendName}`;
+            showModal(chatModal);
+            
+            const chatMessages = $('#chat-messages');
+            chatMessages.innerHTML = '';
+            
+            if(unsubscribeChatMessages) unsubscribeChatMessages();
+            const q = query(collection(db, 'chats', currentOpenChatId, 'messages'), orderBy('createdAt', 'asc'));
+            
+            unsubscribeChatMessages = onSnapshot(q, (snapshot) => {
+                chatMessages.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const msg = doc.data();
+                    const msgEl = document.createElement('div');
+                    msgEl.className = `p-3 rounded-lg max-w-[80%] break-words ${msg.senderId === currentUserId ? 'bg-blue-600 text-white self-end' : 'bg-gray-200 text-gray-800 self-start'}`;
+                    msgEl.textContent = msg.text;
+                    chatMessages.appendChild(msgEl);
+                }); // <-- THIS IS WHERE THE TYPO WAS
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        };
+        
+        const handleSendMessage = async () => {
+            const text = $('#chat-input').value.trim();
+            if(!text || !currentOpenChatId) return;
+            
+            const tempInput = $('#chat-input');
+            tempInput.value = ''; // Clear input immediately
+            
+            try {
+                await addDoc(collection(db, 'chats', currentOpenChatId, 'messages'), {
+                    text: text,
+                    senderId: currentUserId,
+                    createdAt: serverTimestamp()
+                });
+            } catch(e) {
+                console.error(e);
+                tempInput.value = text; // Put text back if send fails
+            }
+        };
+
+        // --- GLOBAL EVENT LISTENERS (Using Event Delegation) ---
         function setupModalListeners() {
-            // Alert
-            $('#alert-ok-btn')?.addEventListener('click', () => hideModal(alertModal));
-            // Comment
-            $('#comment-cancel-btn')?.addEventListener('click', () => { hideModal(commentModal); if(unsubscribeComments){ unsubscribeComments(); unsubscribeComments = null;} currentOpenPostId = null; });
-            $('#comment-submit-btn')?.addEventListener('click', handleSubmitComment);
-            // Story Viewer
-            $('#story-close-btn')?.addEventListener('click', () => hideModal(storyViewerModal));
-            // Chat
-            $('#chat-close-btn')?.addEventListener('click', () => { hideModal(chatModal); if(unsubscribeChatMessages){ unsubscribeChatMessages(); unsubscribeChatMessages = null;} currentOpenChatId = null; });
-            $('#chat-send-btn')?.addEventListener('click', handleSendMessage);
-            $('#chat-input')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); handleSendMessage(); } });
-            // Edit Post
-             $('#edit-post-cancel-btn')?.addEventListener('click', () => { hideModal(editPostModal); currentOpenPostId = null; });
-             $('#edit-post-save-btn')?.addEventListener('click', handleSaveEditPost);
-             // Confirm Delete
-             $('#confirm-delete-cancel-btn')?.addEventListener('click', () => { hideModal(confirmDeleteModal); currentItemToDelete = { type: null, id: null }; });
-             $('#confirm-delete-confirm-btn')?.addEventListener('click', handleConfirmDelete);
-             // Forgot Password
-             $('#forgot-cancel-btn')?.addEventListener('click', () => hideModal(forgotPasswordModal));
-             $('#forgot-send-btn')?.addEventListener('click', handleForgotPassword);
+            $('#alert-ok-btn').addEventListener('click', () => hideModal(alertModal));
+            
+            $('#comment-cancel-btn').addEventListener('click', () => {
+                hideModal(commentModal);
+                if(unsubscribeComments) unsubscribeComments();
+                currentOpenPostId = null;
+            });
+            $('#comment-submit-btn').addEventListener('click', handleSubmitComment);
+            
+            $('#story-close-btn').addEventListener('click', () => hideModal(storyViewerModal));
+            
+            $('#chat-close-btn').addEventListener('click', () => {
+                hideModal(chatModal);
+                if(unsubscribeChatMessages) unsubscribeChatMessages();
+                currentOpenChatId = null;
+            });
+            $('#chat-send-btn').addEventListener('click', handleSendMessage);
         }
-
-        // Updated Global Click Listener
+        
+        // This single listener on pageContent handles clicks for posts, friends, etc.
         pageContent.addEventListener('click', (e) => {
-            const actionTarget = e.target.closest('[data-action]');
-            if (!actionTarget) return;
+            const action = e.target.closest('[data-action]');
+            if (!action) return;
 
-            const action = actionTarget.dataset.action;
-            const id = actionTarget.dataset.id; // Usually the document ID (post, user, etc.)
-
-            console.log("Action clicked:", action, "ID:", id); // Debugging
-
-            // Close any open post menus if clicking elsewhere, unless clicking another menu button OR inside the menu
-             if (action !== 'post-menu' && !actionTarget.closest('.post-menu')) {
-                 $$('.post-menu:not(.hidden)').forEach(menu => menu.classList.add('hidden'));
-             }
-
-            switch(action) {
-                case 'like': handleLikePost(id); break;
-                case 'comment': handleOpenComments(id); break;
-                case 'add-friend': handleSendFriendRequest(id); break;
-                case 'accept-friend': handleAcceptFriendRequest(id); break;
-                case 'follow': handleFollowUser(id); break;
-                case 'unfollow': handleUnfollowUser(id); break;
-                case 'post-menu':
-                     // Toggle THIS menu, close others
-                     $$('.post-menu:not(.hidden)').forEach(menu => {
-                          if (menu.id !== `post-menu-${id}`) menu.classList.add('hidden');
-                     });
-                     const menu = $(`#post-menu-${id}`);
-                     if (menu) menu.classList.toggle('hidden');
-                     break;
-                 case 'edit-post':
-                     handleOpenEditPost(id);
-                      // Close menu after clicking edit (optional)
-                     const menuToCloseEdit = $(`#post-menu-${id}`);
-                     if (menuToCloseEdit) menuToCloseEdit.classList.add('hidden');
-                     break;
-                 case 'delete-post':
-                     handleOpenDeleteConfirm(id, 'post'); // Pass type
-                     // Close menu after clicking delete (optional)
-                     const menuToCloseDelete = $(`#post-menu-${id}`);
-                     if (menuToCloseDelete) menuToCloseDelete.classList.add('hidden');
-                     break;
-                 case 'back-to-profile': // Added listener for settings page back button
-                     showPage('profile');
-                     break;
-                 // Add other actions here (e.g., view profile from post, unfriend)
+            const id = action.dataset.id;
+            switch(action.dataset.action) {
+                case 'like':
+                    handleLikePost(id);
+                    break;
+                case 'comment':
+                    handleOpenComments(id);
+                    break;
+                case 'add-friend':
+                    handleSendFriendRequest(id);
+                    break;
+                case 'accept-friend':
+                    handleAcceptFriendRequest(id);
+                    break;
             }
         });
-
-        // Close post menus if clicking outside
-        document.addEventListener('click', (e) => {
-             // If the click is NOT on a menu button AND NOT inside any open menu
-             if (!e.target.closest('[data-action="post-menu"]') && !e.target.closest('.post-menu')) {
-                 $$('.post-menu:not(.hidden)').forEach(menu => menu.classList.add('hidden'));
-             }
-        });
-
-
+        
         // --- START THE APP ---
-        // Use DOMContentLoaded to ensure HTML is parsed, though type="module" defers anyway
-        document.addEventListener('DOMContentLoaded', init);
+        init();
 
     </script>
 </body>
 </html>
-
