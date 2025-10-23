@@ -1,1 +1,320 @@
+import React, { useState, useEffect, useMemo } from 'react';
+// --- Standard Firebase Imports ---
+import { initializeApp } from 'firebase/app';
+import {
+    getAuth,
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendEmailVerification,
+    sendPasswordResetEmail,
+    signOut,
+} from 'firebase/auth';
+import {
+    getFirestore,
+    doc,
+    setDoc,
+    setLogLevel,
+    collection,
+    getDocs,
+    writeBatch, // Keep
+    serverTimestamp,
+    onSnapshot,
+    addDoc,
+    query,
+    orderBy,
+    deleteDoc, // Keep
+    Timestamp,
+    getDoc,
+    updateDoc,
+    where // Keep
+} from 'firebase/firestore';
+
+// --- User's Firebase Configuration (Corrected) ---
+const firebaseConfig = {
+    apiKey: "AIzaSyClhomaPlXVrk_xeD0_jXHx3x1IPzvHH0s",
+    authDomain: "my-space-app-9d39e.firebaseapp.com",
+    projectId: "my-space-app-9d39e",
+    storageBucket: "my-space-app-9d39e.appspot.com", // Corrected
+    messagingSenderId: "567017323339",
+    appId: "1:567017323339:web:78cb093d20e6090da806ce"
+};
+
+// --- Standard Firebase Initialization (Corrected) ---
+let app, auth, db;
+let firebaseInitializationError = null;
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    setLogLevel('debug'); // Corrected
+    console.log("LOG: Firebase initialized successfully (Handle Friend Requests)");
+} catch (error) {
+    console.error("CRITICAL ERROR DURING FIREBASE INITIALIZATION:", error);
+    firebaseInitializationError = error;
+}
+
+// --- Hardcoded Admin User ---
+const ADMIN_USER_ID = "ADMIN_SPACE_USER_001";
+
+// --- SVG Icons ---
+const HomeIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> <polyline points="9 22 9 12 15 12 15 22" /> </svg> );
+const BellIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /> <path d="M13.73 21a2 2 0 0 1-3.46 0" /> </svg> );
+const UserCircleIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <circle cx="12" cy="12" r="10" /> <circle cx="12" cy="10" r="3" /> <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" /> </svg> );
+const SearchIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <circle cx="11" cy="11" r="8" /> <line x1="21" y1="21" x2="16.65" y2="16.65" /> </svg> );
+const CheckCircleIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /> <polyline points="22 4 12 14.01 9 11.01" /> </svg> );
+const XIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <line x1="18" y1="6" x2="6" y2="18" /> <line x1="6" y1="6" x2="18" y2="18" /> </svg> );
+const SettingsIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /> </svg> );
+const ChevronRightIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <polyline points="9 18 15 12 9 6" /> </svg> );
+const HelpCircleIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <circle cx="12" cy="12" r="10" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /> <line x1="12" y1="17" x2="12.01" y2="17" /> </svg> );
+const GlobeIcon = ({ className }) => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}> <circle cx="12" cy="12" r="10" /> <line x1="2" y1="12" x2="22" y2="12" /> <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /> </svg> );
+
+
+// --- Helper Components ---
+const LoadingSpinner = () => ( <div className="flex items-center justify-center min-h-screen bg-gray-900"> <div className="w-16 h-16 border-4 border-t-4 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div> </div> );
+const ForgotPasswordModal = ({ onClose }) => {
+    const [email, setEmail] = useState(''); const [message, setMessage] = useState(''); const [error, setError] = useState(''); const [isLoading, setIsLoading] = useState(false);
+    const handleSubmit = async (e) => { e.preventDefault(); setIsLoading(true); setMessage(''); setError(''); try { await sendPasswordResetEmail(auth, email); setMessage('Password reset email sent! Check inbox.'); } catch (err) { setError(err.message); } finally { setIsLoading(false); } };
+    return ( <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"> <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md"> <h2 className="text-2xl font-semibold mb-6 text-white">Forgot Password</h2> {message && <p className="text-green-400 mb-4">{message}</p>} {error && <p className="text-red-400 mb-4">{error}</p>} {!message && ( <form onSubmit={handleSubmit}> <div className="mb-4"> <label htmlFor="reset-email" className="block text-sm font-medium text-gray-300 mb-2">Email</label> <input type="email" id="reset-email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100" placeholder="you@example.com" /> </div> <button type="submit" disabled={isLoading} className="w-full p-3 bg-blue-500 text-white rounded-md font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"> {isLoading ? 'Sending...' : 'Send Reset Link'} </button> </form> )} <button onClick={onClose} className="w-full p-3 mt-4 bg-gray-600 text-white rounded-md font-semibold hover:bg-gray-500 transition-colors"> Close </button> </div> </div> );
+};
+
+// --- Authentication Form Components ---
+const LoginForm = ({ onSwitchToSignUp }) => {
+    const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState(''); const [isLoading, setIsLoading] = useState(false); const [showForgotPassword, setShowForgotPassword] = useState(false);
+    const handleLogin = async (e) => { e.preventDefault(); setIsLoading(true); setError(''); try { await signInWithEmailAndPassword(auth, email, password); } catch (err) { console.error("Login Error:", err); setError(err.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'Failed to log in.'); } finally { setIsLoading(false); } };
+    return ( <> <form onSubmit={handleLogin} className="space-y-6"> <h2 className="text-3xl font-bold text-center text-white">Space</h2> {error && <p className="text-red-400 text-center bg-red-900 bg-opacity-30 p-3 rounded-md">{error}</p>} <div> <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">Email</label> <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100" placeholder="you@example.com" /> </div> <div> <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">Password</label> <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100" placeholder="••••••••" /> </div> <div className="text-right"> <button type="button" onClick={() => setShowForgotPassword(true)} className="text-sm text-blue-400 hover:underline"> Forgot Password? </button> </div> <button type="submit" disabled={isLoading} className="w-full p-3 bg-blue-500 text-white rounded-md font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"> {isLoading ? 'Logging In...' : 'Log In'} </button> </form> <p className="mt-8 text-center text-gray-400"> Don't have an account?{' '} <button onClick={onSwitchToSignUp} className="font-semibold text-blue-400 hover:underline"> Sign Up </button> </p> {showForgotPassword && <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />} </> );
+};
+
+const SignUpForm = ({ onSwitchToLogin }) => {
+    const [formData, setFormData] = useState({ firstName: '', surname: '', dob: '', gender: '', email: '', password: '', confirmPassword: '' });
+    const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [isLoading, setIsLoading] = useState(false);
+    const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
+    const followUser = async (currentUserId, userIdToFollow) => { try { const followingRef = doc(db, 'users', currentUserId, 'following', userIdToFollow); await setDoc(followingRef, { followedAt: serverTimestamp() }); } catch (error) { console.error("Error following user: ", error); } };
+    const handleSignUp = async (e) => { e.preventDefault(); setError(''); setMessage(''); if (formData.password !== formData.confirmPassword) { setError("Passwords do not match."); return; } setIsLoading(true); try { const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password); const user = userCredential.user; const profileData = { uid: user.uid, firstName: formData.firstName, surname: formData.surname, displayName: `${formData.firstName} ${formData.surname}`, dob: formData.dob, gender: formData.gender, email: user.email, createdAt: serverTimestamp(), isVerified: false, role: 'user' }; const userProfileRef = doc(db, 'users', user.uid); await setDoc(userProfileRef, profileData); await sendEmailVerification(user); await followUser(user.uid, ADMIN_USER_ID); setMessage('Account created! Check email.'); setFormData({ firstName: '', surname: '', dob: '', gender: '', email: '', password: '', confirmPassword: '' }); } catch (err) { console.error("Sign Up Error:", err); setError(err.code === 'auth/email-already-in-use' ? 'Email already in use.' : 'Failed to create account.'); } finally { setIsLoading(false); } };
+    return ( <> <form onSubmit={handleSignUp} className="space-y-4"> <h2 className="text-3xl font-bold text-center text-white">Join Space</h2> {error && <p className="text-red-400 text-center bg-red-900 bg-opacity-30 p-3 rounded-md">{error}</p>} {message && <p className="text-green-400 text-center bg-green-900 bg-opacity-30 p-3 rounded-md">{message}</p>} <div className="flex gap-4"> <div className="w-1/2"> <label className="block text-sm font-medium text-gray-300 mb-2">First Name</label> <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100" /> </div> <div className="w-1/2"> <label className="block text-sm font-medium text-gray-300 mb-2">Surname</label> <input type="text" name="surname" value={formData.surname} onChange={handleChange} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100" /> </div> </div> <div className="flex gap-4"> <div className="w-1/2"> <label className="block text-sm font-medium text-gray-300 mb-2">Date of Birth</label> <input type="date" name="dob" value={formData.dob} onChange={handleChange} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100" /> </div> <div className="w-1/2"> <label className="block text-sm font-medium text-gray-300 mb-2">Gender</label> <select name="gender" value={formData.gender} onChange={handleChange} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100"> <option value="">Select...</option> <option value="male">Male</option> <option value="female">Female</option> <option value="other">Other</option> <option value="prefer_not_to_say">Prefer not to say</option> </select> </div> </div> <div> <label className="block text-sm font-medium text-gray-300 mb-2">Email</label> <input type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100" /> </div> <div> <label className="block text-sm font-medium text-gray-300 mb-2">Password</label> <input type="password" name="password" value={formData.password} onChange={handleChange} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100" placeholder="At least 6 characters" /> </div> <div> <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label> <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required className="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-100" /> </div> <button type="submit" disabled={isLoading} className="w-full p-3 bg-blue-500 text-white rounded-md font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"> {isLoading ? 'Creating...' : 'Sign Up'} </button> </form> <p className="mt-6 text-center text-gray-400"> Already have account?{' '} <button onClick={onSwitchToLogin} className="font-semibold text-blue-400 hover:underline"> Log In </button> </p> </> );
+};
+
+const AuthPage = () => {
+    const [isLoginView, setIsLoginView] = useState(true);
+    if (firebaseInitializationError || !auth || !db) { return <div>Error initializing Firebase/Auth.</div>; }
+    return ( <div className="w-full max-w-md p-8 bg-gray-800 rounded-lg shadow-xl"> {isLoginView ? ( <LoginForm onSwitchToSignUp={() => setIsLoginView(false)} /> ) : ( <SignUpForm onSwitchToLogin={() => setIsLoginView(true)} /> )} </div> );
+};
+
+const CreatePost = ({ user, userProfile }) => {
+    const [content, setContent] = useState(''); const [isPosting, setIsPosting] = useState(false); const [error, setError] = useState('');
+    const handlePost = async (e) => { e.preventDefault(); if (content.trim() === '' || !userProfile || !db) return; setIsPosting(true); setError(''); try { await addDoc(collection(db, 'posts'), { content: content.trim(), authorId: user.uid, authorDisplayName: userProfile.displayName, authorIsAdmin: userProfile.role === 'admin' || false, createdAt: serverTimestamp(), }); setContent(''); } catch (err) { setError("Failed to create post."); } finally { setIsPosting(false); } };
+    return ( <form onSubmit={handlePost} className="p-4 border-b border-gray-700"> <textarea value={content} onChange={(e) => setContent(e.target.value)} className="w-full p-3 bg-gray-800 border rounded-md text-gray-100" placeholder="What's happening?" rows="3" /> {error && <p className="text-red-400 text-sm mt-2">{error}</p>} <div className="flex justify-end mt-3"> <button type="submit" disabled={isPosting || content.trim() === ''} className="px-6 py-2 bg-blue-500 rounded-full font-semibold disabled:opacity-50"> {isPosting ? 'Posting...' : 'Post'} </button> </div> </form> );
+};
+
+const EditPostModal = ({ post, onClose }) => {
+    const [content, setContent] = useState(post.content); const [isLoading, setIsLoading] = useState(false); const [error, setError] = useState('');
+    const handleSave = async (e) => { e.preventDefault(); if (content.trim() === '') return; setIsLoading(true); setError(''); try { await updateDoc(doc(db, 'posts', post.id), { content: content.trim(), editedAt: serverTimestamp() }); onClose(); } catch (err) { setError("Failed to save post."); } finally { setIsLoading(false); } };
+    return ( <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"> <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md"> <div className="flex justify-between items-center mb-4"> <h2 className="text-xl font-semibold text-white">Edit Post</h2> <button onClick={onClose}> <XIcon className="w-6 h-6" /> </button> </div> {error && <p className="text-red-400 mb-4">{error}</p>} <form onSubmit={handleSave}> <textarea value={content} onChange={(e) => setContent(e.target.value)} className="w-full p-3 bg-gray-700 rounded-md text-gray-100" rows="5" /> <div className="flex justify-end gap-4 mt-6"> <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 rounded-full"> Cancel </button> <button type="submit" disabled={isLoading} className="px-6 py-2 bg-blue-500 rounded-full disabled:opacity-50"> {isLoading ? 'Saving...' : 'Save'} </button> </div> </form> </div> </div> );
+};
+
+const PostItem = ({ post, currentUser }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const formatTimestamp = (timestamp) => { if (!timestamp) return 'Just now'; const date = timestamp.toDate(); const now = new Date(); const diffMs = now - date; const diffSecs = Math.round(diffMs / 1000); if (diffSecs < 60) return `${diffSecs}s ago`; const diffMins = Math.round(diffSecs / 60); if (diffMins < 60) return `${diffMins}m ago`; const diffHours = Math.round(diffMins / 60); if (diffHours < 24) return `${diffHours}h ago`; const diffDays = Math.round(diffHours / 24); if (diffDays === 1) return `1d ago`; return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });};
+    const handleDelete = async () => { try { await deleteDoc(doc(db, 'posts', post.id)); } catch (err) { console.error("Error deleting post:", err); } };
+    const handleEdit = () => { setIsEditing(true); };
+    if (!post || !currentUser) return null;
+    return ( <> <div className="p-4 border-b border-gray-700"> <div className="flex items-center mb-2"> <span className="font-semibold text-white">{post.authorDisplayName || 'Unknown'}</span> {post.authorIsAdmin && ( <CheckCircleIcon className="w-4 h-4 text-blue-400 ml-1.5" title="Verified Admin" /> )} <span className="text-gray-500 text-sm ml-2">· {formatTimestamp(post.createdAt)}</span> </div> <p className="text-gray-200 whitespace-pre-wrap">{typeof post.content === 'string' ? post.content : ''}</p> {currentUser.uid === post.authorId && ( <div className="flex gap-4 mt-3"> <button onClick={handleEdit} className="text-sm text-blue-400 hover:underline"> Edit </button> <button onClick={handleDelete} className="text-sm text-red-400 hover:underline"> Delete </button> </div> )} </div> {isEditing && post && ( <EditPostModal post={post} onClose={() => setIsEditing(false)} /> )} </> );
+};
+
+const HomePageContent = ({ user, userProfile }) => {
+    const [posts, setPosts] = useState([]); const [isLoadingPosts, setIsLoadingPosts] = useState(true); const [error, setError] = useState(null);
+    useEffect(() => { if (!db) { setIsLoadingPosts(false); return; } const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc')); const unsubscribe = onSnapshot(q, (snapshot) => { const postData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(p => p.id); setPosts(postData); setIsLoadingPosts(false); }, (err) => { setError("Failed to load posts."); setIsLoadingPosts(false); }); return () => unsubscribe(); }, [db]);
+    return ( <div> {user && userProfile && <CreatePost user={user} userProfile={userProfile} />} {isLoadingPosts && <p>Loading...</p>} {error && <p>{error}</p>} {!isLoadingPosts && posts.length === 0 && ( <p>Welcome!</p> )} <div className="border-t border-gray-700"> {Array.isArray(posts) && posts.map(post => (post && post.id ? <PostItem key={post.id} post={post} currentUser={user} /> : null))} </div> </div> );
+};
+
+const FriendsPage = ({ user }) => {
+    const [users, setUsers] = useState([]); const [following, setFollowing] = useState(new Set()); const [sentRequests, setSentRequests] = useState(new Set()); const [isLoading, setIsLoading] = useState(true); const [error, setError] = useState(null); const [searchTerm, setSearchTerm] = useState('');
+    useEffect(() => { if (!db || !user) { setIsLoading(false); return; } let isMounted = true; const fetchUsers = async () => { setIsLoading(true); try { const q = query(collection(db, 'users'), where('uid', '!=', user.uid)); const snapshot = await getDocs(q); if (isMounted) setUsers(snapshot.docs.map(doc => doc.data()).filter(u => u && u.uid)); } catch (err) { if(isMounted) setError('Failed to load users.'); } finally { if(isMounted) setIsLoading(false); } }; fetchUsers(); return () => { isMounted = false; }; }, [db, user]);
+    useEffect(() => { if (!db || !user) return; const unsub = onSnapshot(collection(db, 'users', user.uid, 'following'), (snapshot) => setFollowing(new Set(snapshot.docs.map(doc => doc.id)))); return unsub; }, [db, user]);
+    useEffect(() => { if (!db || !user) return; const unsub = onSnapshot(collection(db, 'users', user.uid, 'sentFriendRequests'), (snapshot) => setSentRequests(new Set(snapshot.docs.map(doc => doc.id))), (err) => setError("Could not load request statuses.")); return unsub; }, [db, user]);
+    const handleFollowToggle = async (targetUserId) => { const isCurrentlyFollowing = following.has(targetUserId); const followingRef = doc(db, 'users', user.uid, 'following', targetUserId); try { if (isCurrentlyFollowing) { await deleteDoc(followingRef); } else { await setDoc(followingRef, { followedAt: serverTimestamp() }); } } catch (err) { console.error("Error updating follow status:", err); } };
+    const handleAddFriend = async (targetUserId) => { try { const userProfileRef = doc(db, 'users', user.uid); const userProfileSnap = await getDoc(userProfileRef); if (!userProfileSnap.exists()) return; const senderProfile = userProfileSnap.data(); const senderName = senderProfile.displayName || 'Unknown User'; const batch = writeBatch(db); const requestReceivedRef = doc(db, 'users', targetUserId, 'friendRequests', user.uid); batch.set(requestReceivedRef, { senderId: user.uid, senderName: senderName, status: 'pending', sentAt: serverTimestamp() }); const requestSentRef = doc(db, 'users', user.uid, 'sentFriendRequests', targetUserId); batch.set(requestSentRef, { recipientId: targetUserId, sentAt: serverTimestamp() }); await batch.commit(); } catch (err) { console.error("Error sending friend request:", err); } };
+    const filteredUsers = useMemo(() => { const lower = searchTerm.trim().toLowerCase(); if (!lower) return users; return users.filter(u => (u.displayName || '').toLowerCase().includes(lower) || (u.firstName || '').toLowerCase().includes(lower) || (u.surname || '').toLowerCase().includes(lower) ); }, [users, searchTerm]);
+    return ( <div className="p-4"> <div className="relative mb-6"> <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full p-3 pl-10 bg-gray-800 rounded-full text-gray-100" /> <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"> <SearchIcon className="w-5 h-5" /> </div> </div> {isLoading && <p>Loading...</p>} {error && <p>{error}</p>} <div> {Array.isArray(filteredUsers) && filteredUsers.map(u => { const requestStatus = sentRequests.has(u.uid) ? 'sent' : 'none'; const isFollowing = following.has(u.uid); return ( <div key={u.uid} className="bg-gray-800 p-4 rounded-lg flex items-center justify-between gap-2"> <div className="flex-grow overflow-hidden mr-2"> <div className="flex items-center gap-1.5 truncate"> <span className="font-semibold text-white truncate">{u.displayName || 'Unnamed User'}</span> {u.role === 'admin' && ( <CheckCircleIcon className="w-4 h-4 text-blue-400 flex-shrink-0" title="Verified Admin" /> )} </div> <span className="text-sm text-gray-400 block truncate">@{(u.firstName || '').toLowerCase()}{(u.surname || '').toLowerCase()}</span> </div> <div className="flex gap-2 flex-shrink-0"> <button onClick={() => handleAddFriend(u.uid)} disabled={requestStatus === 'sent'} className={`px-3 py-1 text-xs sm:text-sm rounded-full whitespace-nowrap ${ requestStatus === 'sent' ? 'bg-gray-500 text-gray-300 cursor-not-allowed' : 'bg-gray-600 text-white hover:bg-gray-500' }`} > {requestStatus === 'sent' ? 'Request Sent' : 'Add Friend'} </button> <button onClick={() => handleFollowToggle(u.uid)} className={`px-4 py-1 text-xs sm:text-sm rounded-full whitespace-nowrap font-semibold ${ isFollowing ? 'bg-transparent border border-white text-white' : 'bg-white text-gray-900' }`} > {isFollowing ? 'Following' : 'Follow'} </button> </div> </div> ) })} {!isLoading && Array.isArray(filteredUsers) && filteredUsers.length === 0 && <p className="text-gray-400 text-center">No users found{searchTerm ? ' matching that name' : '.'}</p>} {!isLoading && !Array.isArray(filteredUsers) && <p className="text-red-500 text-center">Error filtering users.</p>} </div> </div> );
+};
+
+// --- UPDATED: NotificationsPage (Handles Requests) ---
+const NotificationsPage = ({ user }) => {
+    const [requests, setRequests] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (!db || !user?.uid) { setIsLoading(false); return; }
+        console.log("NotificationsPage: Setting up listener for user:", user.uid);
+        const requestsRef = collection(db, 'users', user.uid, 'friendRequests');
+        const q = query(requestsRef, where('status', '==', 'pending'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("NotificationsPage: Received", reqs.length, "requests");
+            setRequests(reqs);
+            setIsLoading(false);
+            setError(null);
+        }, (err) => {
+            console.error("Error fetching friend requests:", err);
+            setError("Could not load notifications.");
+            setIsLoading(false);
+        });
+        return () => { console.log("NotificationsPage: Cleaning up listener."); unsubscribe(); };
+    }, [db, user]); // Depend on db and user
+
+    const handleAcceptRequest = async (senderId, senderName = 'Friend') => {
+        console.log(`Accepting request from ${senderId}`);
+        if (!user?.uid || !senderId || !db) return;
+        const batch = writeBatch(db);
+        try {
+            const currentUserFriendRef = doc(db, 'users', user.uid, 'friends', senderId);
+            batch.set(currentUserFriendRef, { addedAt: serverTimestamp(), name: senderName });
+
+            const currentUserProfileRef = doc(db, 'users', user.uid);
+            const currentUserProfileSnap = await getDoc(currentUserProfileRef);
+            const currentUserName = currentUserProfileSnap.exists() ? (currentUserProfileSnap.data().displayName || 'Friend') : 'Friend';
+
+            const senderFriendRef = doc(db, 'users', senderId, 'friends', user.uid);
+            batch.set(senderFriendRef, { addedAt: serverTimestamp(), name: currentUserName });
+
+            const incomingRequestRef = doc(db, 'users', user.uid, 'friendRequests', senderId);
+            batch.delete(incomingRequestRef);
+
+            const sentRequestRef = doc(db, 'users', senderId, 'sentFriendRequests', user.uid);
+            batch.delete(sentRequestRef);
+
+            await batch.commit();
+            console.log("Friend request accepted successfully.");
+        } catch (err) { console.error("Error accepting friend request:", err); setError("Failed to accept request."); }
+    };
+
+    const handleDeclineRequest = async (senderId) => {
+        console.log(`Declining request from ${senderId}`);
+        if (!user?.uid || !senderId || !db) return;
+        const batch = writeBatch(db);
+        try {
+            const incomingRequestRef = doc(db, 'users', user.uid, 'friendRequests', senderId);
+            batch.delete(incomingRequestRef);
+            const sentRequestRef = doc(db, 'users', senderId, 'sentFriendRequests', user.uid);
+            batch.delete(sentRequestRef);
+            await batch.commit();
+            console.log("Friend request declined successfully.");
+        } catch (err) { console.error("Error declining friend request:", err); setError("Failed to decline request."); }
+    };
+
+    return (
+        <div className="p-4">
+            {isLoading && <p className="text-gray-400 text-center">Loading notifications...</p>}
+            {error && <p className="text-red-400 text-center">{error}</p>}
+            {!isLoading && requests.length === 0 && (
+                <div className="bg-gray-800 p-6 rounded-lg">
+                    <p className="text-gray-300 text-center">No new notifications.</p>
+                </div>
+            )}
+            {!isLoading && requests.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white mb-2">Friend Requests</h3>
+                    {requests.map(req => (
+                        <div key={req.id} className="bg-gray-800 p-4 rounded-lg flex items-center justify-between flex-wrap gap-2">
+                             <p className="text-white flex-grow"> <span className="font-semibold">{req.senderName || 'Someone'}</span> wants to be your friend. </p>
+                             <div className="flex gap-2 flex-shrink-0">
+                                <button onClick={() => handleAcceptRequest(req.id, req.senderName)} className="px-3 py-1 bg-blue-500 text-white text-sm rounded-full hover:bg-blue-600"> Accept </button>
+                                <button onClick={() => handleDeclineRequest(req.id)} className="px-3 py-1 bg-gray-600 text-white text-sm rounded-full hover:bg-gray-500"> Decline </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+             {!isLoading && ( <div className="mt-6 border-t border-gray-700 pt-4"> <p className="text-gray-500 text-sm text-center">Other notifications will appear here.</p> D</div> )}
+        </div>
+    );
+};
+
+
+// --- SettingsPage ---
+const SettingsPage = ({ onBack }) => ( <div className="p-4"> <div className="flex items-center mb-6"> <button onClick={onBack} className="text-blue-400 hover:text-blue-300 mr-4">&larr; Back</button> <h2 className="text-xl font-semibold text-white">Settings</h2> </div> <div className="bg-gray-800 rounded-lg overflow-hidden"> <div className="p-4 border-b border-gray-700 flex items-center justify-between"> <div className="flex items-center"> <GlobeIcon className="w-5 h-5 text-gray-400 mr-3" /> <span className="text-white">Language</span> </div> <select id="language" name="language" className="p-1 bg-gray-700 border border-gray-600 rounded-md text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"> <option value="en">English (US)</option> <option value="es">Español</option> </select> </div> <button className="w-full text-left p-4 border-b border-gray-700 flex items-center justify-between hover:bg-gray-700 transition-colors"> <div className="flex items-center"> <HelpCircleIcon className="w-5 h-5 text-gray-400 mr-3" /> <span className="text-white">Help & Support</span> </div> <ChevronRightIcon className="w-5 h-5 text-gray-500" /> </button> </div> </div> );
+
+// --- ProfilePage ---
+const ProfilePage = ({ user, userProfile }) => {
+    const [showSettings, setShowSettings] = useState(false);
+    if (showSettings) { return <SettingsPage onBack={() => setShowSettings(false)} />; }
+    // Safely access profile data
+    const displayName = userProfile?.displayName ?? user?.email ?? 'User';
+    const username = userProfile ? `@${(userProfile.firstName ?? '').toLowerCase()}${(userProfile.surname ?? '').toLowerCase()}` : '';
+    return ( <div className="p-4"> <div className="flex justify-between items-center mb-6"> <span className="text-xl font-semibold text-white">My Profile</span> <div> <button onClick={() => setShowSettings(true)} className="text-gray-300 hover:text-white mr-4 p-2 rounded-full hover:bg-gray-700" aria-label="Settings"> <SettingsIcon className="w-6 h-6" /> </button> <button onClick={() => signOut(auth)} className="text-sm text-red-400 hover:underline"> Log Out </button> </div> </div> <div className="bg-gray-800 p-6 rounded-lg"> <UserCircleIcon className="w-24 h-24 text-gray-600 mx-auto" /> <p className="text-center text-xl font-semibold text-white mt-4"> {displayName} </p> <p className="text-center text-gray-400 mt-2"> {username} </p> </div> </div> );
+};
+
+// --- Header ---
+const Header = ({ onSearchClick }) => ( <header className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between"><h1 className="text-2xl font-bold text-white">Space</h1><button onClick={onSearchClick} className="text-gray-300 hover:text-white" aria-label="Search"><SearchIcon className="w-6 h-6" /></button></header> );
+
+// --- AppLayout (UPDATED) ---
+const AppLayout = ({ user, userProfile }) => {
+    const [page, setPage] = useState('home');
+    const renderPage = () => { switch (page) { case 'home': return <HomePageContent user={user} userProfile={userProfile} />; case 'search': return <FriendsPage user={user} />; case 'notifications': return <NotificationsPage user={user} />; case 'profile': return <ProfilePage user={user} userProfile={userProfile} />; default: return <HomePageContent user={user} userProfile={userProfile} />; } }; // <<< Pass user prop to NotificationsPage
+    return ( <div className="w-full h-screen flex flex-col bg-gray-900"> <Header onSearchClick={() => setPage('search')} /> <main className="flex-grow overflow-y-auto pb-20"> {!user.emailVerified && ( <div className="bg-yellow-800 bg-opacity-50 text-yellow-100 p-4 text-center"> Please verify email. <button onClick={() => sendEmailVerification(user)} className="ml-2 font-semibold underline"> Resend </button> </div> )} {renderPage()} </main> <BottomNav currentPage={page} setPage={setPage} /> </div> );
+};
+
+// --- BottomNav ---
+const BottomNav = ({ currentPage, setPage }) => {
+    const navItems = [ { name: 'home', icon: HomeIcon }, { name: 'notifications', icon: BellIcon }, { name: 'profile', icon: UserCircleIcon }, ];
+    return ( <nav className="fixed bottom-0 left-0 right-0 h-16 bg-gray-800 border-t border-gray-700 flex justify-around items-center"> {navItems.map(item => ( <button key={item.name} onClick={() => setPage(item.name)} className={`flex flex-col items-center justify-center w-full h-full ${ currentPage === item.name ? 'text-blue-400' : 'text-gray-400' } hover:text-blue-300 transition-colors`} > <item.icon className="w-6 h-6" /> <span className="text-xs capitalize">{item.name}</span> </button> ))} </nav> );
+};
+
+// --- Error Boundary Component ---
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { console.log("ErrorBoundary caught:", error); return { hasError: true, error: error }; }
+  componentDidCatch(error, errorInfo) { console.error("ErrorBoundary componentDidCatch:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      const errorMessage = this.state.error instanceof Error ? this.state.error.toString() : 'An unknown error occurred';
+      return ( <div className="min-h-screen w-full bg-gray-900 text-red-400 flex flex-col items-center justify-center p-4"> <h1 className="text-2xl font-bold mb-4">Something went wrong.</h1> <pre className="mt-4 p-2 bg-gray-800 rounded text-xs overflow-auto">{errorMessage}</pre> <button onClick={() => window.location.reload()} className="mt-6 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Reload</button> </div> );
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * Main App Component
+ */
+export default function App() {
+    const [user, setUser] = useState(null);
+    const [userProfile, setUserProfile] = useState(null);
+    const [isAuthReady, setIsAuthReady] = useState(false);
+
+    useEffect(() => {
+        if (!auth) { console.warn("Auth not ready"); setIsAuthReady(true); return; }
+        let profileUnsubscribe = null;
+        const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+            if (profileUnsubscribe) { profileUnsubscribe(); profileUnsubscribe = null; }
+            if (user && db) {
+                setUser(user);
+                const profileRef = doc(db, 'users', user.uid);
+                profileUnsubscribe = onSnapshot(profileRef, (docSnap) => { setUserProfile(docSnap.exists() ? docSnap.data() : false); if (!isAuthReady) setIsAuthReady(true); }, (error) => { console.error("Profile listener error:", error); setUserProfile(false); if (!isAuthReady) setIsAuthReady(true); });
+            } else { setUser(null); setUserProfile(null); if (!isAuthReady) setIsAuthReady(true); }
+        }, (error) => { console.error("Auth listener error:", error); setIsAuthReady(true); });
+        return () => { authUnsubscribe(); if (profileUnsubscribe) profileUnsubscribe(); };
+    }, []); // Correct
+
+
+    const renderContent = () => {
+        if (firebaseInitializationError) { return <div className="text-red-500">Firebase Init Error: {firebaseInitializationError.message}</div> }
+        if (!db || !auth) { if (isAuthReady) { return <div className="text-red-500">Critical Error: Firebase services failed.</div>; } return <LoadingSpinner />; }
+        if (!isAuthReady) { return <LoadingSpinner />; }
+        if (user && userProfile === null) { return <LoadingSpinner />; }
+        if (user && userProfile) { return <AppLayout user={user} userProfile={userProfile} />; }
+        if (user && userProfile === false) { console.error("Profile not found/error. Logging out."); signOut(auth); return <LoadingSpinner />; }
+        return ( <div className="min-h-screen w-full flex items-center justify-center p-4"> <AuthPage /> </div> );
+    };
+
+    return (
+        <ErrorBoundary>
+            <div className="min-h-screen w-full bg-gray-900 text-gray-100 font-['Inter']">
+                 {renderContent()}
+            </div>
+        </ErrorBoundary>
+    );
+}
 
