@@ -50,20 +50,21 @@
 
   <!-- CONFIG: Replace placeholders locally BEFORE deploying -->
   <script>
-    window.SPACE_CONFIG = {
-      // Replace the firebaseConfig with your project's values
-      const firebaseConfig = {
-  apiKey: "AIzaSyClhomaPlXVrk_xeD0_jXHx3x1IPzvHH0s",
-  authDomain: "my-space-app-9d39e.firebaseapp.com",
-  projectId: "my-space-app-9d39e",
-  storageBucket: "my-space-app-9d39e.appspot.com",
-  messagingSenderId: "567017323339",
-  appId: "1:567017323339:web:78cb093d20e6090da806ce"
-};
-     const CLOUDINARY_CLOUD_NAME = "deobpcudu";
-const CLOUDINARY_UPLOAD_PRESET = "myuploads";
+  // --- Firebase Config ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyClhomaPlXVrk_xeD0_jXHx3x1IPzvHH0s",
+    authDomain: "my-space-app-9d39e.firebaseapp.com",
+    projectId: "my-space-app-9d39e",
+    storageBucket: "my-space-app-9d39e.appspot.com",
+    messagingSenderId: "567017323339",
+    appId: "1:567017323339:web:78cb093d20e6090da806ce"
+  };
 
-};
+  // --- Cloudinary Config ---
+  const CLOUDINARY_CLOUD_NAME = "deobpcudu";
+  const CLOUDINARY_UPLOAD_PRESET = "myuploads";
+</script>
+  
       // Admin email (auto-verify)
       ADMIN_EMAIL: "myspacesocialapp@gmail.com"
     };
