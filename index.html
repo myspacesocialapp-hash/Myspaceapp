@@ -1,1 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Space</title>
 
+  <!-- PWA + iOS support -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-512.png">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Space">
+
+  <!-- Minimal inline styles (keeps single-file) -->
+  <style>
+    :root{--bg:#ffffff;--card:#ffffff;--text:#0b1220;--muted:#6b7280;--accent:#2563eb}
+    .dark{--bg:#0b1220;--card:#0f1724;--text:#f8fafc;--muted:#9ca3af;--accent:#3b82f6}
+    html,body,#root{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:Inter,Segoe UI,Roboto,Helvetica,Arial}
+    .container{max-width:960px;margin:0 auto;padding:16px}
+    .card{background:var(--card);border-radius:8px;padding:12px;box-shadow:0 1px 4px rgba(2,6,23,0.06);margin-bottom:12px}
+    .row{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:6px;border:none;cursor:pointer}
+    .btn-ghost{background:transparent;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer}
+    input,textarea,select{padding:8px;border:1px solid #e5e7eb;border-radius:6px;width:100%;background:transparent;color:var(--text)}
+    textarea{min-height:80px;resize:vertical}
+    .small{font-size:13px;color:var(--muted)}
+    .avatar{width:48px;height:48px;border-radius:999px;object-fit:cover}
+    .story{width:64px;height:64px;border-radius:999px;object-fit:cover;border:2px solid var(--accent);cursor:pointer}
+    .hidden{display:none}
+    .mt{margin-top:12px}
+    .mb{margin-bottom:12px}
+    .badge{background:#e6f0ff;color:#08306b;padding:4px 8px;border-radius:999px;font-size:12px}
+    .danger{background:#fee2e2;color:#7f1d1d}
+    .flex{display:flex}
+    .col{display:flex;flex-direction:column}
+    .space-x{gap:8px}
+    a{color:var(--accent);text-decoration:none}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .search-input{width:280px}
+    .post-media{max-width:100%;max-height:380px;border-radius:8px}
+    .cover{height:160px;background:#ccc;border-radius:8px 8px 0 0;object-fit:cover;width:100%}
+    .center{text-align:center}
+    .splash{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column}
+    .splash .logo{font-size:28px;font-weight:800;margin-bottom:8px}
+    @media (max-width:640px){.search-input{width:140px}}
+  </style>
+
+  <!-- Firebase & App config placeholders (replace locally before publishing) -->
+  <script>
+    // ----- IMPORTANT: Replace these placeholders locally before deploying -----
+    // Firebase config
+    const firebaseConfig = {
+  apiKey: "AIzaSyClhomaPlXVrk_xeD0_jXHx3x1IPzvHH0s",
+  authDomain: "my-space-app-9d39e.firebaseapp.com",
+  projectId: "my-space-app-9d39e",
+  storageBucket: "my-space-app-9d39e.firebasestorage.app",
+  messagingSenderId: "567017323339",
+  appId: "1:567017323339:web:78cb093d20e6090da806ce"
+};
+      // Cloudinary (supports images + video)
+      cloudinary: {
+        cloudName: "deobpcudu",
+        uploadPreset: "myuploads"
+      },
+      // Admin UID for auto-follow & auto-verify (replace with actual admin uid)
+      ADMIN_UID: "ADMIN_USER_UID_PLACEHOLDER"
+    };
+  </script>
+
+</head>
+<body>
+  <!-- Splash / loading screen (light mode by default) -->
+  <div id="splash" class="splash">
+    <div class="logo">Space</div>
+    <div class="small">Loading…</div>
+  </div>
+
+  <div id="root" class="container" style="visibility:hidden"></div>
+
+  <!-- Minimal service worker guidance: create sw.js & manifest.json at repo root -->
+  <!-- React + Firebase via CDN (ES modules) -->
+  <script type="module">
+  import React, { useEffect, useState } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
+  import { createRoot } from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
+
+  // Firebase modular SDK CDN
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, addDoc, query, where, getDocs, orderBy, onSnapshot, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  import { getStorage } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
+
+  // ======= Config from top of file (user must replace placeholders) =======
+  const CONFIG = window.SPACE_CONFIG || {};
+  const firebaseConfig = CONFIG.firebaseConfig || {};
+  const CLOUDINARY_CLOUD = (CONFIG.cloudinary && CONFIG.cloudinary.cloudName) || "YOUR_CLOUD_NAME";
+  const CLOUDINARY_UPLOAD_PRESET = (CONFIG.cloudinary && CONFIG.cloudinary.uploadPreset) || "YOUR_UPLOAD_PRESET";
+  const ADMIN_UID = CONFIG.ADMIN_UID || "";
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  /**************************************************************************
+   * Cloudinary upload helper (unsigned preset)
+   **************************************************************************/
+  async function uploadToCloudinary(file) {
+    if (!CLOUDINARY_CLOUD || !CLOUDINARY_UPLOAD_PRESET) throw new Error('Cloudinary not configured');
+    const typeSegment = file.type.startsWith('video') ? 'video' : 'image';
+    const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/${typeSegment}/upload`;
+    const form = new FormData();
+    form.append('file', file);
+    form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(url, { method: 'POST', body: form });
+    return res.json();
+  }
+
+  /**************************************************************************
+   * Firestore helpers (collections)
+   **************************************************************************/
+  const usersDoc = (uid) => doc(db, 'users', uid);
+  const postsCol = () => collection(db, 'posts');
+  const storiesCol = () => collection(db, 'stories');
+  const followsCol = () => collection(db, 'follows');
+  const chatMessages = (chatId) => collection(db, `chats/${chatId}/messages`);
+
+  async function createUserProfile(uid, profile) {
+    await setDoc(usersDoc(uid), { ...profile, createdAt: serverTimestamp() });
+  }
+  async function getUserProfile(uid) {
+    const d = await getDoc(usersDoc(uid));
+    return d.exists() ? { id: d.id, ...d.data() } : null;
+  }
+  async function searchUsers(term) {
+    if (!term || term.length < 2) return [];
+    const q = query(collection(db, 'users'), where('displayNameLower', '>=', term.toLowerCase()), orderBy('displayNameLower'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  async function createPost(post) { return addDoc(postsCol(), { ...post, createdAt: serverTimestamp() }); }
+  function subscribeFeed(cb) { const q = query(collection(db, 'posts'), orderBy('createdAt','desc')); return onSnapshot(q, snap => cb(snap.docs.map(d=>({ id: d.id, ...d.data() })))); }
+  async function updatePost(postId, data) { return updateDoc(doc(db,'posts',postId), data); }
+  async function deletePost(postId) { return deleteDoc(doc(db,'posts',postId)); }
+
+  async function createStory(uid, mediaUrl, mediaType) { return addDoc(storiesCol(), { uid, mediaUrl, mediaType, createdAt: serverTimestamp(), expiresAt: null }); }
+  function subscribeStories(cb) { const q = query(storiesCol(), orderBy('createdAt','desc')); return onSnapshot(q, snap => cb(snap.docs.map(d=>({ id: d.id, ...d.data() })))); }
+
+  async function followUser(fromUid, toUid) { const id = `${fromUid}_${toUid}`; await setDoc(doc(db, 'follows', id), { follower: fromUid, following: toUid, createdAt: serverTimestamp() }); }
+  async function addFriend(requester, target) { const id = `${requester}_${target}`; await setDoc(doc(db, 'friends', id), { requester, target, status: 'pending', createdAt: serverTimestamp() }); }
+
+  async function sendMessage(chatId, from, text) { return addDoc(chatMessages(chatId), { from, text, createdAt: serverTimestamp() }); }
+  function subscribeMessages(chatId, cb) { const q = query(chatMessages(chatId), orderBy('createdAt','asc')); return onSnapshot(q, snap => cb(snap.docs.map(d=>({ id: d.id, ...d.data() })))); }
+
+  /**************************************************************************
+   * Utility
+   **************************************************************************/
+  function fmtDate(ts) {
+    if (!ts) return '';
+    try { if (ts.seconds) return new Date(ts.seconds*1000).toLocaleString(); return new Date(ts).toLocaleString(); } catch { return ''; }
+  }
+
+  /**************************************************************************
+   * React App
+   **************************************************************************/
+  function App() {
+    const [user, setUser] = useState(null);
+    const [page, setPage] = useState('loading'); // loading, login, register, home, profile, settings, messages, admin
+    const [feed, setFeed] = useState([]);
+    const [stories, setStories] = useState([]);
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light'); // LIGHT by default
+    const [lang, setLang] = useState(localStorage.getItem('lang') || 'en');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [selectedProfile, setSelectedProfile] = useState(null);
+
+    useEffect(()=> {
+      // splash screen hide when app ready
+      const splash = document.getElementById('splash');
+      // firebase auth listener
+      onAuthStateChanged(auth, async (u) => {
+        setUser(u);
+        if (u) {
+          const prof = await getUserProfile(u.uid);
+          if (!prof) {
+            setPage('register');
+          } else {
+            setPage('home');
+          }
+        } else {
+          setPage('login');
+        }
+      });
+      // feed & stories
+      const unsubFeed = subscribeFeed(setFeed);
+      const unsubStories = subscribeStories(setStories);
+      // finish loading
+      setTimeout(()=> {
+        if (splash) splash.style.display = 'none';
+        document.getElementById('root').style.visibility = 'visible';
+      }, 700);
+      return ()=> { unsubFeed(); unsubStories(); };
+    }, []);
+
+    useEffect(()=> {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    useEffect(()=> { localStorage.setItem('lang', lang); }, [lang]);
+
+    // search
+    useEffect(()=> {
+      const t = setTimeout(async ()=> {
+        if (searchTerm.length >= 2) {
+          const r = await searchUsers(searchTerm);
+          setSearchResults(r);
+        } else setSearchResults([]);
+      }, 300);
+      return ()=> clearTimeout(t);
+    }, [searchTerm]);
+
+    return (
+      React.createElement('div', null,
+        React.createElement(TopBar, { user, onNav: setPage, theme, setTheme, lang, setLang, searchTerm, setSearchTerm, searchResults, onOpenProfile: uid => { setSelectedProfile(uid); setPage('profile'); } }),
+        React.createElement('div', { style: { minHeight: '60vh' } },
+          page === 'loading' && React.createElement('div', { className: 'card' }, 'Loading...'),
+          page === 'login' && React.createElement(LoginPage, { onSuccess: () => setPage('home') }),
+          page === 'register' && React.createElement(RegisterPage, { onSuccess: () => setPage('home') }),
+          page === 'home' && React.createElement(HomePage, { user, feed, stories }),
+          page === 'profile' && React.createElement(ProfilePage, { uid: selectedProfile || (user && user.uid) }),
+          page === 'settings' && React.createElement(SettingsPage, { lang, setLang }),
+          page === 'messages' && React.createElement(MessagesPage, { currentUser: user }),
+          page === 'admin' && React.createElement(AdminPage, null)
+        ),
+        React.createElement(Footer, null)
+      )
+    );
+  }
+
+  /**************************************************************************
+   * TopBar component
+   **************************************************************************/
+  function TopBar({ user, onNav, theme, setTheme, lang, setLang, searchTerm, setSearchTerm, searchResults, onOpenProfile }) {
+    return (
+      React.createElement('div', { className: 'topbar' },
+        React.createElement('div', { className: 'row' },
+          React.createElement('div', { style: { fontWeight:700, fontSize:20 } }, 'Space'),
+          React.createElement('div', { className: 'card row', style: { position:'relative' } },
+            React.createElement('input', { className: 'search-input', placeholder: 'Search friends...', value: searchTerm, onInput: e => setSearchTerm(e.target.value) }),
+            (searchResults && searchResults.length > 0) && React.createElement('div', { className: 'card', style: { position:'absolute', marginTop:56, zIndex:20 } },
+              searchResults.map(s => React.createElement('div', { key: s.id, style: { padding:'6px' } }, React.createElement('a', { href:'#', onClick: ev => { ev.preventDefault(); onOpenProfile(s.id); } }, s.displayName || s.email)))
+            )
+          )
+        ),
+        React.createElement('div', { className: 'row' },
+          React.createElement('select', { value: lang, onChange: e => setLang(e.target.value), className: 'small' },
+            React.createElement('option', { value: 'en' }, 'EN'),
+            React.createElement('option', { value: 'yo' }, 'YO'),
+            React.createElement('option', { value: 'pt' }, 'PT')
+          ),
+          React.createElement('button', { className: 'btn-ghost', onClick: () => setTheme(theme === 'light' ? 'dark' : 'light') }, theme === 'light' ? '🌞' : '🌙'),
+          user ? React.createElement(React.Fragment, null,
+            React.createElement('button', { className: 'btn', onClick: () => onNav('home') }, 'Home'),
+            React.createElement('button', { className: 'btn-ghost', onClick: () => onNav('profile') }, 'Profile'),
+            React.createElement('button', { className: 'btn-ghost', onClick: () => onNav('settings') }, 'Settings'),
+            React.createElement('button', { className: 'btn-ghost', onClick: async () => { await signOut(auth); window.location.reload(); } }, 'Logout')
+          ) : React.createElement(React.Fragment, null,
+            React.createElement('button', { className: 'btn', onClick: () => onNav('login') }, 'Login'),
+            React.createElement('button', { className: 'btn-ghost', onClick: () => onNav('register') }, 'Sign up')
+          )
+        )
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Login Page
+   **************************************************************************/
+  function LoginPage({ onSuccess }) {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [msg, setMsg] = useState('');
+    async function submit(e) {
+      e && e.preventDefault();
+      setMsg('');
+      try { await signInWithEmailAndPassword(auth, email, password); onSuccess && onSuccess(); } catch (err) { console.error(err); setMsg(err.message || 'Login failed'); }
+    }
+    async function forgot() {
+      if (!email) return alert('Enter your email then press Forgot password');
+      try { await sendPasswordResetEmail(auth, email); alert('Reset email sent'); } catch (err) { alert(err.message || 'Failed'); }
+    }
+    return (
+      React.createElement('div', { className: 'card' },
+        React.createElement('h3', null, 'Login'),
+        React.createElement('form', { onSubmit: submit, className: 'col' },
+          React.createElement('input', { placeholder: 'Email', value: email, onInput: e => setEmail(e.target.value) }),
+          React.createElement('input', { placeholder: 'Password', type: 'password', value: password, onInput: e => setPassword(e.target.value) }),
+          React.createElement('div', { className: 'row' },
+            React.createElement('button', { className: 'btn', type: 'submit' }, 'Login'),
+            React.createElement('button', { type: 'button', className: 'btn-ghost', onClick: forgot }, 'Forgot password?')
+          ),
+          msg && React.createElement('div', { className: 'small danger' }, msg)
+        )
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Register Page (Name, DOB, Gender, Email, Password) + email verify + auto-follow admin + admin auto-verify
+   **************************************************************************/
+  function RegisterPage({ onSuccess }) {
+    const [form, setForm] = useState({ name:'', dob:'', gender:'', email:'', password:'' });
+    const [error, setError] = useState('');
+    async function submit(e) {
+      e && e.preventDefault();
+      setError('');
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
+        const uid = cred.user.uid;
+        const isAdmin = (uid === ADMIN_UID);
+        await createUserProfile(uid, {
+          displayName: form.name,
+          displayNameLower: (form.name || '').toLowerCase(),
+          dob: form.dob,
+          gender: form.gender,
+          email: form.email,
+          avatarUrl: null,
+          coverUrl: null,
+          verified: isAdmin // auto-verify if this uid matches ADMIN_UID placeholder
+        });
+        // auto-follow admin if ADMIN_UID present and new user is not admin
+        if (ADMIN_UID && uid !== ADMIN_UID) {
+          try { await followUser(uid, ADMIN_UID); } catch(e){}
+        }
+        try { await sendEmailVerification(cred.user); } catch(e){}
+        alert('Registered. Verification email sent. Please verify your email.');
+        onSuccess && onSuccess();
+      } catch (err) { console.error(err); setError(err.message || 'Failed to register'); }
+    }
+    return (
+      React.createElement('div', { className: 'card' },
+        React.createElement('h3', null, 'Sign up'),
+        React.createElement('form', { onSubmit: submit, className: 'col' },
+          React.createElement('input', { placeholder: 'Full name', value: form.name, onInput: e => setForm({...form, name: e.target.value}), required: true }),
+          React.createElement('label', { className: 'small' }, 'Date of birth'),
+          React.createElement('input', { type: 'date', value: form.dob, onInput: e => setForm({...form, dob: e.target.value}), required: true }),
+          React.createElement('select', { value: form.gender, onChange: e => setForm({...form, gender: e.target.value}), required: true },
+            React.createElement('option', { value: '' }, 'Select gender'),
+            React.createElement('option', { value: 'male' }, 'Male'),
+            React.createElement('option', { value: 'female' }, 'Female'),
+            React.createElement('option', { value: 'other' }, 'Other')
+          ),
+          React.createElement('input', { placeholder: 'Email', value: form.email, onInput: e => setForm({...form, email: e.target.value}), required: true }),
+          React.createElement('input', { placeholder: 'Password', type: 'password', value: form.password, onInput: e => setForm({...form, password: e.target.value}), required: true }),
+          React.createElement('div', { className: 'row' }, React.createElement('button', { className: 'btn', type: 'submit' }, 'Create account')),
+          error && React.createElement('div', { className: 'small danger' }, error)
+        )
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Home Page — composer, story list, feed
+   **************************************************************************/
+  function HomePage({ user, feed, stories }) {
+    return (
+      React.createElement('div', null,
+        React.createElement('div', { className: 'card row' }, React.createElement('div', { style: { display:'flex', flexDirection:'column', flex:1 } }, React.createElement(Composer, null))),
+        React.createElement('div', { className: 'card' },
+          React.createElement('h4', null, 'Stories'),
+          React.createElement('div', { className: 'row', style: { overflowX:'auto' } },
+            React.createElement(StoryComposer, null),
+            stories.map(s => React.createElement('div', { key: s.id, style: { marginLeft:8 } }, React.createElement('img', { src: s.mediaUrl, className: 'story', onClick: () => window.open(s.mediaUrl, '_blank') })))
+          )
+        ),
+        React.createElement('div', null, feed.map(p => React.createElement(PostCard, { key: p.id, post: p })))
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Composer: create posts with Cloudinary image/video upload
+   **************************************************************************/
+  function Composer() {
+    const [text, setText] = useState('');
+    const [file, setFile] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const me = auth.currentUser;
+    async function submit(e) {
+      e && e.preventDefault();
+      if (!me) return alert('Login first');
+      setLoading(true);
+      try {
+        let media = null;
+        if (file) {
+          const res = await uploadToCloudinary(file);
+          media = { url: res.secure_url, type: res.resource_type || 'image' };
+        }
+        await createPost({ authorId: me.uid, content: text, media, likes: [], createdAt: serverTimestamp() });
+        setText(''); setFile(null);
+      } catch (err) { console.error(err); alert('Failed to post'); } finally { setLoading(false); }
+    }
+    return (
+      React.createElement('form', { onSubmit: submit, className: 'col' },
+        React.createElement('textarea', { placeholder: "What's happening?", value: text, onInput: e => setText(e.target.value) }),
+        React.createElement('input', { type: 'file', accept: 'image/*,video/*', onChange: e => setFile(e.target.files[0]) }),
+        React.createElement('div', { className: 'row' }, React.createElement('button', { className: 'btn', type: 'submit', disabled: loading }, loading ? 'Posting...' : 'Post'))
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Story Composer
+   **************************************************************************/
+  function StoryComposer() {
+    const [file, setFile] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const me = auth.currentUser;
+    async function submit(e) {
+      e && e.preventDefault();
+      if (!me) return alert('Login to add a story');
+      if (!file) return alert('Pick a file');
+      setLoading(true);
+      try {
+        const res = await uploadToCloudinary(file);
+        await createStory(me.uid, res.secure_url, res.resource_type || 'image');
+        setFile(null);
+      } catch (err) { console.error(err); alert('Story upload failed'); } finally { setLoading(false); }
+    }
+    return (
+      React.createElement('form', { onSubmit: submit, className: 'col', style: { minWidth:120 } },
+        React.createElement('input', { type: 'file', accept: 'image/*,video/*', onChange: e => setFile(e.target.files[0]) }),
+        React.createElement('button', { className: 'btn-ghost', type: 'submit', disabled: loading }, loading ? 'Uploading...' : 'Add Story')
+      )
+    );
+  }
+
+  /**************************************************************************
+   * PostCard component (edit/delete own posts)
+   **************************************************************************/
+  function PostCard({ post }) {
+    const me = auth.currentUser;
+    const isMine = me && me.uid === post.authorId;
+    const [editing, setEditing] = useState(false);
+    const [text, setText] = useState(post.content || '');
+    async function save() { try { await updatePost(post.id, { content: text }); setEditing(false); } catch (err) { alert('Failed'); } }
+    async function remove() { if (!confirm('Delete post?')) return; try { await deletePost(post.id); } catch (e) { alert('Failed to delete'); } }
+    return (
+      React.createElement('div', { className: 'card' },
+        React.createElement('div', { className: 'row', style: { justifyContent:'space-between' } },
+          React.createElement('div', null, React.createElement('strong', null, post.authorId), React.createElement('div', { className: 'small' }, fmtDate(post.createdAt))),
+          isMine && React.createElement('div', { className: 'row space-x' }, React.createElement('button', { className: 'btn-ghost', onClick: () => setEditing(!editing) }, 'Edit'), React.createElement('button', { className: 'btn-ghost danger', onClick: remove }, 'Delete'))
+        ),
+        editing ? React.createElement('div', null, React.createElement('textarea', { value: text, onInput: e => setText(e.target.value) }), React.createElement('button', { className: 'btn', onClick: save }, 'Save')) : React.createElement('div', null, React.createElement('p', null, post.content), post.media && React.createElement('div', null, post.media.type && post.media.type.startsWith('video') ? React.createElement('video', { src: post.media.url, controls: true, className: 'post-media' }) : React.createElement('img', { src: post.media.url, className: 'post-media' })))
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Profile Page
+   **************************************************************************/
+  function ProfilePage({ uid }) {
+    const [profile, setProfile] = useState(null);
+    const [editing, setEditing] = useState(false);
+    const [name, setName] = useState('');
+    const [avatarFile, setAvatarFile] = useState(null);
+    const me = auth.currentUser;
+    const owner = !uid || (me && uid === me.uid);
+    const viewUid = uid || (me && me.uid);
+
+    useEffect(()=> {
+      if (!viewUid) return;
+      let mounted = true;
+      (async ()=> {
+        const p = await getUserProfile(viewUid);
+        if (mounted) { setProfile(p); setName(p?.displayName || ''); }
+      })();
+      return ()=> mounted = false;
+    }, [viewUid]);
+
+    async function save() {
+      if (!viewUid) return;
+      try {
+        let avatarUrl = profile?.avatarUrl || null;
+        if (avatarFile) {
+          const r = await uploadToCloudinary(avatarFile);
+          avatarUrl = r.secure_url;
+        }
+        await updateDoc(doc(db, 'users', viewUid), { displayName: name, avatarUrl });
+        const p = await getUserProfile(viewUid);
+        setProfile(p);
+        setEditing(false);
+      } catch (err) { console.error(err); alert('Failed'); }
+    }
+
+    async function follow() { if (!me) return alert('Login'); try { await followUser(me.uid, viewUid); alert('Followed'); } catch(e){ alert('Failed to follow'); } }
+    async function addFr() { if (!me) return alert('Login'); try { await addFriend(me.uid, viewUid); alert('Request sent'); } catch(e){ alert('Failed'); }
+
+    if (!profile) return React.createElement('div', { className: 'card' }, 'Loading...');
+    return (
+      React.createElement('div', null,
+        React.createElement('div', { className: 'card' },
+          React.createElement('img', { src: profile.coverUrl || '', alt: 'cover', className: 'cover', onError: e => e.target.style.display='none' }),
+          React.createElement('div', { style: { marginTop:-40, display:'flex', alignItems:'center', gap:12 } },
+            React.createElement('img', { src: profile.avatarUrl || '/default-avatar.png', className: 'avatar' }),
+            React.createElement('div', null, React.createElement('div', { style: { fontSize:18, fontWeight:600 } }, profile.displayName), React.createElement('div', { className: 'small' }, profile.verified ? React.createElement('span', { className: 'badge' }, '✔ Verified') : null)),
+            React.createElement('div', { style: { marginLeft:'auto' }, className: 'row' },
+              !owner && React.createElement('button', { className: 'btn', onClick: follow }, 'Follow'),
+              !owner && React.createElement('button', { className: 'btn-ghost', onClick: addFr }, 'Add Friend'),
+              owner && React.createElement('button', { className: 'btn-ghost', onClick: () => setEditing(!editing) }, 'Edit profile')
+            )
+          ),
+          editing && React.createElement('div', { className: 'mt' },
+            React.createElement('input', { placeholder: 'Display name', value: name, onInput: e => setName(e.target.value) }),
+            React.createElement('input', { type: 'file', accept: 'image/*', onChange: e => setAvatarFile(e.target.files[0]) }),
+            React.createElement('div', { className: 'row mt' }, React.createElement('button', { className: 'btn', onClick: save }, 'Save'))
+          )
+        )
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Messages Page (realtime)
+   **************************************************************************/
+  function MessagesPage({ currentUser }) {
+    const [chatId, setChatId] = useState('');
+    const [msgs, setMsgs] = useState([]);
+    const [text, setText] = useState('');
+
+    useEffect(()=> {
+      if (!chatId) return;
+      const unsub = subscribeMessages(chatId, setMsgs);
+      return ()=> unsub();
+    }, [chatId]);
+
+    async function openChatWith() {
+      const other = prompt('Enter other user UID to chat with');
+      if (!other) return;
+      const id = [currentUser.uid, other].sort().join('_');
+      setChatId(id);
+    }
+
+    async function send() {
+      if (!text || !chatId) return;
+      await sendMessage(chatId, currentUser.uid, text);
+      setText('');
+    }
+
+    return (
+      React.createElement('div', { className: 'card' },
+        React.createElement('h3', null, 'Messages'),
+        !chatId && React.createElement('div', null, React.createElement('button', { className: 'btn', onClick: openChatWith }, 'Open Chat')),
+        chatId && React.createElement('div', null,
+          React.createElement('div', { className: 'card', style: { height:320, overflow:'auto' } }, msgs.map(m => React.createElement('div', { key: m.id, style: { padding:'6px', background: m.from === currentUser.uid ? '#ecfeff' : 'transparent', borderRadius:6, marginBottom:6 } },
+            React.createElement('div', { className: 'small' }, React.createElement('strong', null, m.from === currentUser.uid ? 'You' : m.from), ' · ', React.createElement('span', { className: 'small' }, fmtDate(m.createdAt))),
+            React.createElement('div', null, m.text)
+          ))),
+          React.createElement('div', { className: 'row mt' },
+            React.createElement('input', { placeholder: 'Type a message', value: text, onInput: e => setText(e.target.value) }),
+            React.createElement('button', { className: 'btn', onClick: send }, 'Send')
+          )
+        )
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Settings Page
+   **************************************************************************/
+  function SettingsPage({ lang, setLang }) {
+    return (
+      React.createElement('div', { className: 'card' },
+        React.createElement('h3', null, 'Settings'),
+        React.createElement('div', { className: 'col' },
+          React.createElement('label', { className: 'small' }, 'Language'),
+          React.createElement('select', { value: lang, onChange: e => setLang(e.target.value) }, React.createElement('option', { value: 'en' }, 'English'), React.createElement('option', { value: 'yo' }, 'Yoruba'), React.createElement('option', { value: 'pt' }, 'Portuguese')),
+          React.createElement('div', { className: 'mt' }, React.createElement('h4', null, 'Help & Support'), React.createElement('p', { className: 'small' }, 'If you need help, contact support@example.com'))
+        )
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Admin Page (basic)
+   **************************************************************************/
+  function AdminPage() {
+    const [users, setUsers] = useState([]);
+    useEffect(()=> {
+      (async ()=> {
+        const q = query(collection(db,'users'), orderBy('createdAt','desc'));
+        const snap = await getDocs(q);
+        setUsers(snap.docs.map(d=>({ id: d.id, ...d.data() })));
+      })();
+    }, []);
+    async function toggleVerified(uid, current) {
+      await updateDoc(doc(db,'users',uid), { verified: !current });
+      const p = await getUserProfile(uid);
+      setUsers(u => u.map(x => x.id === uid ? p : x));
+    }
+    return (
+      React.createElement('div', { className: 'card' },
+        React.createElement('h3', null, 'Admin'),
+        users.map(u => React.createElement('div', { key: u.id, className: 'row', style: { justifyContent:'space-between', marginBottom:8 } }, React.createElement('div', null, React.createElement('strong', null, u.displayName), React.createElement('div', { className: 'small' }, u.email)), React.createElement('div', null, React.createElement('button', { className: 'btn-ghost', onClick: () => toggleVerified(u.id, u.verified) }, u.verified ? 'Unverify' : 'Verify'))))
+      )
+    );
+  }
+
+  /**************************************************************************
+   * Footer
+   **************************************************************************/
+  function Footer() {
+    return React.createElement('div', { className: 'center small mt' }, React.createElement('div', null, 'Space • PWA demo • Replace placeholders with your Firebase & Cloudinary credentials'));
+  }
+
+  /**************************************************************************
+   * Render App
+   **************************************************************************/
+  const container = document.getElementById('root');
+  createRoot(container).render(React.createElement(App));
+
+  /**************************************************************************
+   * PWA service worker registration & A2HS prompt (Android/Chrome + iOS banner)
+   **************************************************************************/
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then(() => console.log('✅ Service Worker Registered')).catch(err => console.log('❌ Service Worker failed:', err));
+    });
+  }
+
+  // Add-to-Home-Screen prompt
+  window.deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window.deferredPrompt = e;
+    // Create install button
+    const a2hsBtn = document.createElement('button');
+    a2hsBtn.innerText = '📲 Install Space App';
+    Object.assign(a2hsBtn.style, { position:'fixed', bottom:'20px', left:'50%', transform:'translateX(-50%)', padding:'12px 20px', backgroundColor:'#0d1117', color:'#fff', border:'none', borderRadius:'8px', cursor:'pointer', zIndex:1000, boxShadow:'0 4px 10px rgba(0,0,0,0.2)', fontSize:'15px' });
+    document.body.appendChild(a2hsBtn);
+    a2hsBtn.addEventListener('click', async () => {
+      a2hsBtn.style.display = 'none';
+      if (window.deferredPrompt) {
+        window.deferredPrompt.prompt();
+        const { outcome } = await window.deferredPrompt.userChoice;
+        console.log('User choice:', outcome);
+        window.deferredPrompt = null;
+      }
+    });
+  });
+
+  // iOS helper banner (Safari)
+  window.addEventListener('load', () => {
+    const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+    const isInStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    if (isIos && !isInStandalone) {
+      const iosMsg = document.createElement('div');
+      iosMsg.innerHTML = `<div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0d1117;color:white;padding:12px 20px;border-radius:10px;font-size:14px;text-align:center;z-index:1000;box-shadow:0 4px 10px rgba(0,0,0,0.2);">📱 Tap <strong>Share</strong> → <strong>Add to Home Screen</strong> to install <b>Space</b></div>`;
+      document.body.appendChild(iosMsg);
+      setTimeout(()=> iosMsg.remove(), 10000);
+    }
+  });
+
+  </script>
+
+  <!-- NOTE for deployers:
+       1) Create manifest.json and sw.js at repo root (examples in earlier chat messages).
+       2) Replace placeholders near top of this file:
+          - window.SPACE_CONFIG.firebaseConfig.*
+          - window.SPACE_CONFIG.cloudinary.*
+          - ADMIN_UID
+       3) Add icons/icon-192.png and icons/icon-512.png to repo root /icons folder.
+       4) Use Firestore and Storage rules provided earlier in the chat for development/test.
+       5) Deploy to GitHub Pages or Firebase Hosting (README has steps).
+  -->
+
+</body>
+</html>
