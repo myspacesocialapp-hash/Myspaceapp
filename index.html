@@ -1,5 +1,3 @@
-AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -380,7 +378,7 @@ AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
         </div>
     </div>
 
-    <script typeEverything">
+    <script type="module">
         // --- PWA Service Worker ---
         if ('serviceWorker' in navigator) {
             const swContent = `
@@ -484,7 +482,7 @@ AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
         
         function checkGeminiApiKey() {
             if (!geminiApiKey) {
-                showAPIError(new Error("Please add your Google AI API Key in Settings ⚙️."), error, errorText);
+                showAPIError(new Error("Please add your Google AI API Key in Settings ⚙️."), audioError, audioErrorText);
                 return false;
             }
             return true;
@@ -565,6 +563,8 @@ AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
                 friendlyMessage = "Authentication failed. Please check your API Key in Settings ⚙️.";
             } else if (err.message.includes('fetch')) {
                  friendlyMessage = "Network error. Please check your connection.";
+            } else if (err.message.includes('not found')) {
+                 friendlyMessage = "Model not found. I may have used an incorrect model name.";
             }
             textEl.textContent = `Error: ${friendlyMessage}`;
             el.classList.remove('hidden');
@@ -636,7 +636,10 @@ AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
             if (!checkStabilityApiKey()) return;
             setUILoading(true);
             
-            const apiUrl = 'https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image';
+            // *** UPDATED MODEL ID ***
+            const modelId = 'stable-diffusion-xl-1024-v1-0';
+            const apiUrl = `https://api.stability.ai/v1/generation/${modelId}/text-to-image`;
+            
             const { width, height } = getDimensions(aspectRatio);
             
             let finalPrompt = prompt;
@@ -701,7 +704,9 @@ AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
             if (!checkStabilityApiKey()) return;
             setUILoading(true);
             
-            const apiUrl = 'https://api.stability.ai/v1/generation/stable-diffusion-v1-6/image-to-image';
+            // *** UPDATED MODEL ID ***
+            const modelId = 'stable-diffusion-xl-1024-v1-0';
+            const apiUrl = `https://api.stability.ai/v1/generation/${modelId}/image-to-image`;
             
             try {
                 // Convert the full data URL (which uploadedImageData now is) to a Blob
@@ -764,7 +769,10 @@ AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
 
         // --- API Call for Idea Spark (Text Generation) ---
         async function getPromptIdeas(keyword) {
-            if (!checkGeminiApiKey()) return;
+            if (!checkGeminiApiKey()) {
+                 showAPIError(new Error("Please add your Google AI API Key in Settings ⚙️."), ideaError, ideaError);
+                return;
+            }
             ideaLoading.classList.remove('hidden');
             ideaError.classList.add('hidden');
             ideaResults.innerHTML = '';
@@ -779,9 +787,19 @@ AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
             };
 
             try {
-                const response = await fetchWithRetry(apiUrl, payload, geminiApiKey);
-                const result = await response.json();
+                // This is a Google API, so we don't need fetchWithRetry
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    throw new Error(errorBody.error?.message || response.statusText);
+                }
+
+                const result = await response.json();
                 const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!text) {
                     throw new Error('No ideas generated. The response was empty.');
@@ -856,9 +874,18 @@ AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
             };
 
             try {
-                const response = await fetchWithRetry(apiUrl, payload, geminiApiKey);
-                const result = await response.json();
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    throw new Error(errorBody.error?.message || response.statusText);
+                }
 
+                const result = await response.json();
                 const part = result?.candidates?.[0]?.content?.parts?.[0];
                 const audioData = part?.inlineData?.data;
                 const mimeType = part?.inlineData?.mimeType;
@@ -892,34 +919,6 @@ AIzaSyB7ON7u3YDA5FhdX3ZGehr0i_8ckO-80Hk
             }
         }
 
-        // Generic fetch with retry, now without the key in the payload
-        async function fetchWithRetry(url, payload, apiKey) {
-            let response;
-            let delay = 1000;
-            const headers = { 'Content-Type': 'application/json' };
-            
-            // This is for Google APIs
-            if (url.includes('googleapis.com')) {
-                 url = `${url}?key=${apiKey}`;
-            }
-
-            for (let i = 0; i < 4; i++) { 
-                response = await fetch(url, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) return response; 
-                if (response.status === 429 || response.status >= 500) {
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                } else {
-                    const errorBody = await response.json();
-                    throw new Error(`API request failed: ${errorBody.error?.message || response.statusText}`);
-                }
-            }
-            throw new Error('API request failed after multiple retries.');
-        }
         
         // --- Audio Helper Functions ---
         function base64ToArrayBuffer(base64) {
